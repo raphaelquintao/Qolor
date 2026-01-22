@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Photophobia Debug</title>
+  <link href="../assets/icon.png" rel="icon" type="image/x-icon"/>
+  <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/qpicker.css">
+  <link rel="stylesheet" href="debug.css">
+  <meta name="color-scheme" content="dark light"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <script src="debug.js" type="module"></script>
+</head>
+<body>
+
+<header class="flex flex-center-v">
+  <h2 id="title">Photophobia Debug</h2>
+  <span class="on-right"></span>
+</header>
+
+<hr/>
+
+<section class="section">
+  <input type="number" id="color_hue" min="0" max="360" value="200">
+  <input type="number" id="color_saturation" min="0" max="100" value="50">
+  <input type="number" id="color_lightness" min="0" max="100" value="50">
+</section>
+<section class="section" id="picker"></section>
+
+</body>
+</html>

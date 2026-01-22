@@ -8,19 +8,24 @@
   "icons": {
     "250": "assets/icon.png"
   },
+  "incognito": "spanning",
   "permissions": [
     "theme",
-    "storage"
+    "storage",
+    "unlimitedStorage",
+    "browserSettings",
+    "management"
   ],
   "background": {
-    "page": "bg.html"
+    "page": "bg.html",
+    "persistent": true
   },
   "browser_action": {
     "browser_style": false,
     "default_icon": {
       "250": "assets/icon.png"
     },
-    "default_title": "Photophobia",
+    "default_title": "Photophobia - Popup",
     "default_popup": "options.html"
   },
   "options_ui": {
@@ -28,15 +33,15 @@
     "page": "options.html"
   },
   "sidebar_action": {
-    "default_title": "Photophobia",
-    "default_panel": "sidebar.html",
+    "default_title": "Photophobia - Sidebar",
+    "default_panel": "options.html",
     "default_icon": "assets/icon.png",
     "browser_style": false
   },
   "applications": {
     "gecko": {
       "id": "photophobia@quintao.ninja",
-      "strict_min_version": "60.0"
+      "strict_min_version": "69.0"
     }
   }
 }
