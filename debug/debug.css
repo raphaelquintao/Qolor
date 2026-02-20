@@ -1,0 +1,19 @@
+body {
+  max-width: 400px;
+}
+
+
+#picker-container {
+  max-width: 200px;
+  margin: 0 auto;
+}
+
+#controls-container {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.1em;
+}
+
+#results-container {
+  font-size: 0.9rem;
+}

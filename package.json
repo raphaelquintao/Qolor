@@ -1,32 +1,15 @@
 {
   "name": "photophobia-dynamic",
+  "description": "Photophobia Dynamic",
   "version": "1.0.0",
-  "description": "Photophobia — dynamic Firefox theme to tune colors, contrast and brightness for comfortable browsing (Manifest V2).",
-  "main": "index.js",
+  "author": "Raphael Quintão",
+  "type": "module",
+  "private": true,
   "scripts": {
     "build": "web-ext build --source-dir . --overwrite-dest --artifacts-dir dist",
     "run": "web-ext run --source-dir . ",
-    "dev": "web-ext run --keep-profile-changes --source-dir . -f 'girlyfox' -p jane --no-reload --start-url 'about:home' --devtools",
     "lint": "web-ext lint --source-dir .",
     "package": "web-ext build --source-dir . --artifacts-dir dist",
     "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "firefox-extension",
-    "theme",
-    "accessibility",
-    "contrast",
-    "photophobia"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/raphaelquintao/PhotophobiaFirefox.git"
-  },
-  "author": "Raphael Quintão",
-  "license": "UNLICENSED",
-  "private": true,
-  "devDependencies": {
-    "web-ext": "^9.2.0",
-    "@types/firefox-webext-browser": "^143.0.0"
   }
 }

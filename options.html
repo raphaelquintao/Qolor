@@ -6,7 +6,7 @@
   <link href="assets/icon.png" rel="icon" type="image/x-icon"/>
 
 
-  <link rel="stylesheet" href="assets/fontawesome7/css/all.min.css">
+  <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/qpicker.css">
 
@@ -18,82 +18,104 @@
 
 <div class="content">
 
-  <header class="flex flex-center-v">
-    <h2 id="title">Photophobia</h2>
-    <span class="on-right"></span>
-    <select id="scheme-select">
-      <option value="QGray">QGray</option>
-      <option value="QPink">QPink</option>
-      <option value="QDay" selected>QDay</option>
-    </select>
+  <header id="main-header">
+    <div class="left">
+      <span class="main-title">Photophobia</span>
+    </div>
 
-    <button id="btn-popup" popover="help-popover" class="btn-icon" title="Help">
-      <i class="fas fa-circle-question"></i>
-    </button>
+    <div class="actions flex gap-0-5rem align-items-center">
+      <!--      <button id="btn-sett" class="btn-icon" title="Settings">-->
+      <!--         <i class="fa-solid fa-gear"></i>-->
+      <!--      </button>-->
+
+      <!--      <button id="btn-open-sidebar" title="Open in Sidebar">-->
+      <!--        <i class="fa-solid fa-right-to-bracket fa-flip-horizontal"></i>-->
+      <!--      </button>-->
+
+      <!--      <button id="btn-open-popout" title="Open in New Window">-->
+      <!--        <i class="fa-solid fa-up-right-from-square"></i>-->
+      <!--      </button>-->
+    </div>
 
   </header>
 
   <hr/>
 
-  <section class="section flex ">
-    <span id="scheme-name" contenteditable="true" spellcheck="false">OK Computer</span>
-    <button id="btn-del" class="btn-icon" title="Delete">
-      <i class="fas fa-trash-can"></i>
-    </button>
-    <span class="on-right"></span>
-    <button id="btn-undo" class="btn-icon" title="Restore">
-      <i class="fas fa-rotate-left"></i>
-    </button>
-    <button id="btn-new" class="btn-icon" title="Duplicate">
-      <i class="fas fa-plus"></i>
-    </button>
+  <section class="section flex flex-col full-width gap-0 prefs-section" data-collapsed="true">
+    <header class="section-header">
+      <span class="title">Preferences</span>
+      <span class="indicator"><i class="fas fa-chevron-down"></i></span>
+    </header>
+    <div class="flex flex-col collapse prefs-container">
+    </div>
   </section>
+
   <hr/>
 
-  <section class="section ">
+  <section class="section flex flex-col full-width gap-0 scheme-section">
+    <header class="section-header">
+      <span class="title">Color Schemes</span>
+      <span class="on-right"></span>
+      <button id="btn-undo" class="btn-icon small" title="Restore">
+        <i class="fas fa-rotate-left"></i>
+      </button>
+      <button id="btn-new" class="btn-icon" title="Duplicate">
+        <i class="fas fa-plus"></i>
+      </button>
+    </header>
+
+    <div id="scheme-selector" class="scheme-selector">
+      <div class="overlay left"></div>
+      <div class="overlay right"></div>
+      <div class="scheme-container">
+        <div class="loading">Loading...</div>
+      </div>
+    </div>
 
 
-    <input id="cm-l1" class="btn" type="checkbox" value="asdlight">
-    <label for="cm-l1" title="Light Mode">
-      <i class="fas fa-sun"></i>
-    </label>
+  </section>
+
+  <hr/>
+
+  <section class="section flex flex-row flex-wrap full-width gap-0-3rem justify-content-center">
+    <div class="button-toolbar">
+      <label title="Lock">
+        <input class="btn" type="checkbox" id="opt-lock">
+        <i class="fas fa-lock"></i>
+      </label>
+    </div>
 
     <div class="button-toolbar">
-      <input id="cm-l" class="btn" type="radio" name="color-mode" value="light">
-      <label for="cm-l" title="Light Mode">
+      <label title="Light Mode">
+        <input class="btn" type="radio" name="opt-theme-mode" value="light">
         <i class="fas fa-sun"></i>
       </label>
-      <input id="cm-a" class="btn" type="radio" name="color-mode" value="auto">
-      <label for="cm-a" title="Auto (System)">
-        <i class="fas fa-circle-half-stroke"></i>
-      </label>
-      <input id="cm-d" class="btn" type="radio" name="color-mode" value="dark">
-      <label for="cm-d" title="Dark Mode">
+      <label title="Dark Mode">
+        <input class="btn" type="radio" name="opt-theme-mode" value="dark">
         <i class="fas fa-moon"></i>
       </label>
     </div>
 
-    <div class="info" id="contrast"></div>
+    <pre class="info" id="info"></pre>
 
   </section>
 
   <hr/>
 
-  <section class="flex flex-row flex-center-h">
-    <section id="opt-panel" class="flex flex-col"></section>
-    <!--    <hr/>-->
-    <section id="opt-text" class="flex flex-col"></section>
-  </section>
-
+  <section id="pickers-container" class="flex"></section>
 
   <hr/>
 
-  <footer id="buttons" class="section flex">
-    <button id="btn-reload">Reload</button>
-    <button id="btn-default" title="Clear all you data">Clear</button>
-    <button id="btn-sync" title="Save all on Cloud">Sync</button>
-    <span class="on-right"></span>
-    <button id="btn-save" title="Save all Locally">Save</button>
+  <footer id="main-footer" class="flex flex-col">
+    <section class="flex gap-0-5rem align-items-center padding-0-5rem">
+      <button id="btn-reload">Reload</button>
+      <button id="btn-surprise" title="Clear all you data">
+        <i class="fas fa-dice"></i> Surprise Me!
+      </button>
+      <button id="btn-sync" title="Save all on Cloud">Sync</button>
+      <span class="on-right"></span>
+      <button id="btn-save" title="Save all Locally">Save</button>
+    </section>
   </footer>
 
 </div>

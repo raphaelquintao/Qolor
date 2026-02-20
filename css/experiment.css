@@ -1,0 +1,21 @@
+#webextpanels-window {
+  background: none !important;
+}
+
+#reload-button {
+  fill: red;
+}
+
+/*
+  "theme_experiment": {
+    "stylesheet": "css/experiment.css",
+    "colors": {
+      "focus_outline": "--arrowpanel-background",
+      "arrowpanel": "--reload-button-color"
+    },
+    "properties": {
+      "space_large": "--focus-outline-color"
+    }
+  },
+
+*/
