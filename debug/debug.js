@@ -1,4 +1,5 @@
-import { QColor, QPicker } from "../js/QPicker.js";
+import { QColor } from '../js/libs/QColor.js';
+import { QPicker } from "../js/libs/QPicker.js";
 
 
 const controls = document.getElementById('controls-container');
@@ -94,11 +95,11 @@ picker.addEventListener('colorchange',
   (ev) => {
     console.log('color change', ev.color);
     
-    results.textContent = `Curr: (${ev.color.precision})\n`;
+    results.textContent = `Curr: \n`;
     results.textContent += `${ev.color.to_string('hsl')}\n`;
     results.textContent += `${ev.color.to_string('rgb')}\n`;
     results.textContent += `${ev.color.to_string('hex')}\n\n`;
-    results.textContent += `Previous: (${ev.target.previous_color.precision})\n`;
+    results.textContent += `Previous:\n`;
     results.textContent += `${ev.target.previous_color.to_string('hsl')}\n`;
     results.textContent += `${ev.target.previous_color.to_string('rgb')}\n`;
     results.textContent += `${ev.target.previous_color.to_string('hex')}\n\n`;

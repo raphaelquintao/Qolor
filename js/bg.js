@@ -1,4 +1,4 @@
-import { QColor } from './QPicker.js';
+import { QColor } from './libs/QColor.js';
 import { BYTES_TO_STRING, QCollection, QScheme } from "./QUtil.js";
 
 
@@ -13,8 +13,13 @@ data.loaded = new QCollection({
   show_slider_value:         false,
   sync_selected:             true,
   alpha:                     false,
+  min_contrast:              5
 });
 window.data = data;
+
+window.get_data_loaded = () => {
+  return data.loaded;
+};
 
 
 // q.colors.onSelect = scheme => {
@@ -29,27 +34,42 @@ window.data = data;
 // };
 
 let gray = new QScheme('• Gray', '_default');
+gray.gen_mode = 'dual';
 
 let gray2 = new QScheme('Gray 2', 'gray2');
+gray2.gen_mode = 'dual';
 gray2.panel.hsla = {h: 220, s: 5, l: 25};
 gray2.text.hsla = {h: 214, s: 2, l: 90};
 
 let dark_pink = new QScheme('Dark Pink', 'qdpink');
+dark_pink.gen_mode = 'normal';
 dark_pink.panel.hsla = {h: 325, s: 65, l: 25};
-dark_pink.text.hsla = {h: 325, s: 25, l: 75};
+dark_pink.update_secondary();
 
 let light_pink = new QScheme('Light Pink', 'qlpink');
-light_pink.panel.hsla = {h: 343, s: 27, l: 52};
-light_pink.text.hsla = {h: 178, s: 31, l: 95};
+light_pink.gen_mode = 'normal';
+light_pink.panel.parse("hsla(321, 38%, 47%, 1)");
+light_pink.update_secondary();
 
 let light_pink2 = new QScheme('Light Pink', 'qlpink2');
-light_pink2.panel.parse("hsla(321, 38%, 47%, 1)");
-light_pink2.text.parse("hsla(52, 100%, 81%, 1)");
+light_pink2.gen_mode = 'colorful';
+light_pink2.panel.hsla = {h: 343, s: 27, l: 52};
 light_pink2.locked = true;
+light_pink2.update_secondary();
+
+let purple = new QScheme('Purple', 'qpurple');
+purple.gen_mode = 'colorful';
+purple.panel.parse("hsl(285 60% 22%)");
+// purple.panel.hsla = {h: 280, s: 50, l: 30};
+purple.update_secondary();
 
 let red = new QScheme('Red', 'qred');
 red.panel.hsla = {h: 352, s: 35, l: 42};
-red.text.hsla = {h: 214, s: 2, l: 85};
+red.update_secondary();
+
+let broken = new QScheme('Temp', 'temp');
+broken.panel.parse('hsl(312.53 83.36% 52%)');
+broken.update_secondary();
 
 
 data.loaded.add(gray, false);
@@ -57,13 +77,14 @@ data.loaded.add(gray2, false);
 data.loaded.add(dark_pink, false);
 data.loaded.add(light_pink, false);
 data.loaded.add(light_pink2, false);
+data.loaded.add(purple, false);
 data.loaded.add(red, false);
 
 data.loaded.add(new QScheme(), false);
 data.loaded.add(new QScheme(), false);
 data.loaded.add(new QScheme(), false);
+data.loaded.add(broken, false);
 data.loaded.add(new QScheme(), true);
-data.loaded.add(new QScheme(), false);
 data.loaded.add(new QScheme(), false);
 
 let serialized = data.loaded.serialize();
@@ -77,52 +98,35 @@ function ui_refresh(origin = 'bg', ignore = []) {
   browser.runtime.sendMessage({key: 'refresh', origin: origin, ignore: ignore, to: 'front'});
 }
 
-// -- Functions
-// function do_change_name(id, new_name) {
-//   let scheme = q.colors.find_by_id(id);
-//   if (scheme.name !== new_name) {
-//     scheme.name = new_name;
-//     q.colors.applySelected();
-//     ui_refresh();
-//   }
-// }
 
-// function do_create_new(name) {
-//   let scheme = new QScheme();
-//
-//   let cur = JSON.parse(JSON.stringify(q.colors.getSelected()));
-//   scheme.parse({mode: cur.mode, text: cur.text, panel: cur.panel, name: name});
-//
-//   // scheme.apply();
-//
-//   q.colors.add(scheme, true);
-//   q.colors.applySelected();
-//   ui_refresh();
-// }
-
-// function do_delete(id) {
-//   if (id === '_default') return;
-//   q.colors.remove(q.colors.find_by_id(id));
-//   q.colors.selectById('_default');
-//   ui_refresh();
-// }
-
-// function do_clear() {
-//   QStorage.clearLocal();
-//   QStorage.clearSync();
-//   q.saved = new QCollection();
-//   q.synced = new QCollection();
-//   q.colors = new QCollection();
-//
-//   q.colors.add(gray, true);
-//   q.colors.add(dark_pink, false);
-//   q.colors.add(light_pink, false);
-//   q.colors.applySelected();
-//   ui_refresh();
-// }
 
 /** @type {browser.windows.Window|null} */
 let popout = null;
+
+function open_popout() {
+  if (popout !== null) {
+    browser.windows.update(popout.id, {focused: true});
+    return;
+  }
+  browser.windows.getLastFocused().then(last => {
+    // console.info('Last Focused Window', last);
+    browser.windows.create({
+      url:                 browser.runtime.getURL('options.html?view=popout'),
+      type:                'popup',
+      focused:             true,
+      allowScriptsToClose: true,
+      top:                 last.top + 120,
+      left:                last.left + last.width - 420,
+      width:               400,
+      height:              600
+    }).then(win => {
+      popout = win;
+    }, reason => {
+      console.error('Failed to create Popout', reason);
+    });
+    
+  });
+};
 
 // -- Messages
 browser.runtime.onMessage.addListener((message, sender, send_response) => {
@@ -131,12 +135,24 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
   console.log('onMessage BG', message, sender, send_response);
   
   if (message.key === 'get_data') {
-    send_response({data});
+    // send_response(data);
+    return Promise.resolve({
+      loaded: data.loaded.serialize()
+    });
   }
   
-  // if (message.key === 'ui_refresh') {
-  //   ui_refresh(message.origin);
-  // }
+  if(message.key === 'set_data') {
+    data.loaded = QCollection.unserialize(message.loaded);
+    data.loaded.apply_selected();
+    ui_refresh(message.origin, []);
+    return;
+  }
+  
+  if(message.key === 'get_options') {
+    return Promise.resolve({
+      options: data.loaded.options
+    });
+  }
   
   if (message.key === 'set_scheme') {
     data.loaded.select_by_id(message.id);
@@ -150,6 +166,10 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
   
   if (message.key === 'update_scheme_color') {
     ui_refresh(message.origin, ['colors', 'initial']);
+  }
+  
+  if (message.key === 'surprise_me') {
+    ui_refresh(message.origin, ['initial']);
   }
   
   if (message.key === 'delete_scheme') {
@@ -169,72 +189,51 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
     ui_refresh(message.origin, []);
   }
   
-  // if (message.key === 'new') {
-  //   do_create_new(message.new_name);
-  //
-  // } else if (message.key === 'del') {
-  //   do_delete(message.id);
-  //
-  // } else if (message.key === 'set_scheme') {
-  //   q.colors.selectById(message.value);
-  //   ui_refresh();
-  //
-  // } else if (message.key === 'change_name') {
-  //   do_change_name(message.id, message.new_name);
-  //
-  // } else if (message.key === 'save') {
-  //   QStorage.saveLocal({'qColor': q.colors.getFlat()});
-  //   q.saved = q.colors.clone();
-  //   ui_refresh();
-  //
-  // } else if (message.key === 'sync') {
-  //   QStorage.saveSync({'qColor': q.colors.getFlat()});
-  //   q.synced = q.colors.clone();
-  //   ui_refresh();
-  // } else if (message.key === 'clear') {
-  //   // console.log('click CLEAR');
-  //   do_clear();
-  // } else if (message.key === 'undo') {
-  //   q.colors.getSelected().parse(message.serialized);
-  //   q.colors.applySelected();
-  //   ui_refresh();
-  //   // console.log('click CLEAR');
-  // }
+  
   if (message.key === 'open_popout') {
     if (popout !== null) {
       browser.windows.update(popout.id, {focused: true});
       return;
     }
-    popout = browser.windows.create({
-      url:    browser.runtime.getURL('options.html?view=popout'),
-      type:   'panel',
-      top:    0,
-      left:   1620,
-      width:  400,
-      height: 600
-    }).then(win => {
-      return win;
+    browser.windows.getLastFocused().then(last => {
+      // console.info('Last Focused Window', last);
+      browser.windows.create({
+        url:                 browser.runtime.getURL('options.html?view=popout'),
+        type:                'popup',
+        focused:             true,
+        allowScriptsToClose: true,
+        top:                 last.top + 120,
+        left:                last.left + last.width - 420,
+        width:               400,
+        height:              600
+      }).then(win => {
+        popout = win;
+      }, reason => {
+        console.error('Failed to create Popout', reason);
+      });
+      
     });
+    
   }
   
 });
 
-browser.windows.onRemoved.addListener(windowId => {
-  if (popout !== null && windowId === popout.id) {
+browser.windows.onRemoved.addListener(window_id => {
+  console.info('Window Removed', window_id);
+  
+  if (popout !== null && window_id === popout.id) {
     popout = null;
   }
 });
 
 browser.runtime.onInstalled.addListener(details => {
-  
-  // console.log('IM installed', q.colors);
-  // do_create_new('Try edit me!');
+  console.info('Installed', details);
 });
 
 
 
 browser.storage.onChanged.addListener((changes, area) => {
-  console.log("Change in storage area: " + area);
+  console.info("Change in storage area: " + area);
   
   let changed_items = Object.keys(changes);
   
@@ -250,7 +249,7 @@ const STKEY = 'qcolor';
 
 
 function lixo(changeInfo) {
-  console.log('Vertical Tabs changed:', changeInfo);
+  console.info('Vertical Tabs changed:', changeInfo);
 }
 
 browser.browserSettings.verticalTabs.onChange.addListener(lixo);
@@ -273,16 +272,16 @@ async function main() {
   let c2 = new QColor('hsl(325, 50%, 30%)');
   let bg = new QColor('hsl(240, 17%, 11%)');
   console.log('rgb',
-    c1.blend_with(c2, 0.3, 'rgb').to_string(),
-    c2.blend_with(c1, 0.3, 'rgb').to_string()
+    c1.blend(c2, 0.3, 'rgb').to_string(),
+    c2.blend(c1, 0.3, 'rgb').to_string()
   );
   console.log('hsl',
-    c1.blend_with(c2, 0.3).to_string(),
-    c2.blend_with(c1, 0.3).to_string()
+    c1.blend(c2, 0.3).to_string(),
+    c2.blend(c1, 0.3).to_string()
   );
-  const n = bg.min_contrast_color(bg, 5.0)
+  const n = bg.min_contrast_color(bg, 5.0);
   console.log('contrast',
-    n.to_string(),
+    JSON.stringify(n),
     bg.contrast_ratio(n)
   );
   

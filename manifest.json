@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
-  "name": "Photophobia Dynamic",
-  "short_name": "Photophobia",
+  "name": "Qolor: Dynamic Theme Engine",
+  "short_name": "Qolor",
   "description": "A theme that let you adjust colors shades and bright for texts and panels dynamically and easily.",
   "version": "1.3",
   "developer": {
@@ -26,17 +26,13 @@
   },
   "browser_action": {
     "browser_style": false,
-    "default_icon": {
-      "250": "assets/icon.png"
-    },
-    "default_title": "Photophobia - Popup",
+    "default_icon": "assets/icon_colored.svg",
     "default_popup": "options.html?view=popup"
   },
   
   "sidebar_action": {
-    "default_title": "Photophobia",
     "default_panel": "options.html?view=sidebar",
-    "default_icon": "assets/icon.png",
+    "default_icon": "assets/icon_colored.svg",
     "browser_style": false
   },
   "browser_specific_settings": {

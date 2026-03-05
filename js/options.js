@@ -1,5 +1,6 @@
-import { QPicker } from './QPicker.js';
-import { QCollection, QScheme, UUID } from "./QUtil.js";
+import { QColor } from './libs/QColor.js';
+import { QPicker, QSlider } from './libs/QPicker.js';
+import { QCollection, UUID } from "./QUtil.js";
 
 // -- SETUP ---
 const URL_SEARCH_PARAMS = new URLSearchParams(window.location.search);
@@ -48,7 +49,10 @@ const pickers_container = document.querySelector('#pickers-container');
 const scheme_selector = document.querySelector('#scheme-selector');
 const scheme_container = document.querySelector('#scheme-selector .scheme-container');
 const header_actions = document.querySelector('#main-header .actions');
+const header_title = document.querySelector('#main-header .main-title');
 
+header_title.innerText = browser.runtime.getManifest().short_name;
+document.title = browser.runtime.getManifest().short_name + `- ${VIEW.charAt(0).toUpperCase() + VIEW.slice(1)}`;
 
 // -- Create Options Checkboxes
 const options = {
@@ -60,8 +64,26 @@ const options = {
 };
 for (let key in options) prefs_container.append(options[key].parentElement);
 
+const contrast_slider = new QSlider({
+  label: 'Minimum Contrast',
+  min: 1,
+  max: 21,
+  step: 0.1,
+  value: 5,
+  classes: []
+});
+contrast_slider.append_to(prefs_container);
+contrast_slider.addEventListener('input', ev => {
+  let value = parseFloat(contrast_slider.value);
+  browser.runtime.getBackgroundPage().then(win => {
+    let data_loaded = win.data.loaded;
+    data_loaded.options.min_contrast = value;
+    browser.runtime.sendMessage({key: 'update_scheme_color', origin: MY_ID});
+  });
+});
+
 // -- Create Header Action Buttons
-const btn_open_sidebar = UI.create_button('<i class="fa-solid fa-right-to-bracket fa-flip-horizontal"></i>', {title: 'Open Sidebar'});
+const btn_open_sidebar = UI.create_button('<i class="fa-solid fa-right-to-bracket fa-flip-horizontal"></i>', {title: 'Toggle Sidebar'});
 const btn_open_popout = UI.create_button('<i class="fa-solid fa-up-right-from-square"></i>', {title: 'Open Popout'});
 if (VIEW === 'popout') {
   // header_actions.append(btn_open_sidebar);
@@ -87,27 +109,39 @@ let btn_reload = document.getElementById('btn-reload');
 let btn_save = document.getElementById('btn-save');
 let btn_sync = document.getElementById('btn-sync');
 
-let btn_undo = document.getElementById('btn-undo');
 let btn_new = document.getElementById('btn-new');
 
 let opt_lock = document.getElementById('opt-lock');
 let opt_theme_mode = document.querySelectorAll('input[name="opt-theme-mode"]');
+let opt_gen_mode = document.querySelectorAll('input[name="opt-gen-mode"]');
 
-console.log(opt_theme_mode);
 
 btn_surprise.addEventListener('click', ev => {
-  ev.preventDefault();
-  browser.runtime.sendMessage({key: 'surprise', origin: MY_ID});
+  browser.runtime.getBackgroundPage().then(win => {
+    let data_loaded = win.data.loaded;
+    let scheme = data_loaded.get_selected();
+    
+    scheme.randomize();
+    
+    scheme.apply();
+    
+    browser.runtime.sendMessage({
+      key:    'surprise_me',
+      id:     scheme.id,
+      color:  {panel: scheme.panel.toString(), text: scheme.text.toString()},
+      origin: MY_ID
+    });
+  });
 });
 
 
 
 // -- Create Pickers
 const panel_picker = new QPicker({
-  label: 'Panel'
+  label: ''
 });
 const text_picker = new QPicker({
-  label: 'Text'
+  label: ''
 });
 panel_picker.append_to(pickers_container);
 text_picker.append_to(pickers_container);
@@ -115,18 +149,24 @@ text_picker.append_to(pickers_container);
 panel_picker.addEventListener('colorchange', evt => {
   console.log('PANEL COLOR CHANGE', evt);
   /** @type {QColor} */
-  let color = evt.color;
+  let color = evt.color.clone();
   
   browser.runtime.getBackgroundPage().then(win => {
     let data_loaded = win.data.loaded;
     let scheme = data_loaded.get_selected();
     scheme.panel = color.clone();
+    
+    scheme.update_secondary();
+    text_picker.color = scheme.text;
+    if(!scheme.panel.equals(color)) {
+      panel_picker.color = scheme.panel;
+    }
+
     scheme.apply();
     
     browser.runtime.sendMessage({
       key:    'update_scheme_color',
       type:   'panel',
-      color:  color.toString(),
       origin: MY_ID
     });
   });
@@ -141,13 +181,16 @@ text_picker.addEventListener('colorchange', evt => {
   browser.runtime.getBackgroundPage().then(win => {
     let data_loaded = win.data.loaded;
     let scheme = data_loaded.get_selected();
-    scheme.text = color;
+    scheme.update_secondary();
+    if(!scheme.text.equals(color)) {
+      text_picker.color = scheme.text;
+    }
+    panel_picker.color = scheme.panel;
     scheme.apply();
     
     browser.runtime.sendMessage({
       key:    'update_scheme_color',
       type:   'text',
-      color:  color.toString(),
       origin: MY_ID
     });
   });
@@ -200,6 +243,45 @@ function bind_ui_events() {
     update_overlays(scheme_selector);
   });
   
+  // Simple tooltip.
+  document.addEventListener('mouseover', ev => {
+    if (ev.target.title && ev.target.title.length > 0) {
+      ev.target.dataset.title = ev.target.title;
+      ev.target.removeAttribute('title');
+    }
+    
+    if (ev.target.dataset.title) {
+      // console.log('Show tooltip for', ev.target, ev.target.dataset.title);
+      let tooltip = document.createElement('div');
+      tooltip.className = 'tooltip';
+      tooltip.innerHTML = ev.target.dataset.title;
+      document.body.append(tooltip);
+      const timeout = setTimeout(() => {
+        tooltip.style.opacity = '1';
+      }, 500);
+      
+      const rect = ev.target.getBoundingClientRect();
+      const tooltip_rect = tooltip.getBoundingClientRect();
+      
+      let top = rect.top - tooltip_rect.height - 5;
+      if (top < 0) top = rect.bottom + 5;
+      
+      let left = rect.left + (rect.width - tooltip_rect.width) / 2;
+      if (left < 0) left = 5;
+      else if (left + tooltip_rect.width > window.innerWidth) {
+        left = window.innerWidth - tooltip_rect.width - 5;
+      }
+      
+      tooltip.style.top = `${top}px`;
+      tooltip.style.left = `${left}px`;
+      
+      ev.target.addEventListener('mouseleave', () => {
+        clearTimeout(timeout);
+        tooltip.remove();
+      }, {once: true});
+    }
+  });
+  
 }
 
 bind_ui_events();
@@ -232,13 +314,17 @@ function create_scheme_card(scheme, selected = false) {
   modes.className = 'modes';
   scheme_card.append(modes);
   
-  let theme_mode = document.createElement('span');
-  theme_mode.className = 'mode theme-mode';
-  modes.append(theme_mode);
+  let gen_mode = document.createElement('span');
+  gen_mode.className = 'mode gen-mode';
+  modes.append(gen_mode);
   
-  let page_mode = document.createElement('span');
-  page_mode.className = 'mode page-mode';
-  modes.append(page_mode);
+  // let theme_mode = document.createElement('span');
+  // theme_mode.className = 'mode theme-mode';
+  // modes.append(theme_mode);
+  //
+  // let page_mode = document.createElement('span');
+  // page_mode.className = 'mode page-mode';
+  // modes.append(page_mode);
   
   let contrast_mode = document.createElement('span');
   contrast_mode.className = 'contrast';
@@ -267,6 +353,7 @@ function create_scheme_card(scheme, selected = false) {
   return scheme_card;
 }
 
+
 /** @param {QCollection} data
  * @param {string} origin
  * @param {string[]} ignore
@@ -276,6 +363,8 @@ function update_ui(data, origin = 'bg', ignore = []) {
   console.log('Updating UI', {origin, ignore, is_origin});
   
   const loaded = data;
+  
+  const selected_scheme = loaded.get_selected();
   
   options.show_output.checked = loaded.options.show_output;
   options.show_output_mode_selector.checked = loaded.options.show_output_mode_selector;
@@ -301,18 +390,32 @@ function update_ui(data, origin = 'bg', ignore = []) {
       card.style.setProperty('--fg', scheme.text.toString());
       card.style.setProperty('--theme-mode', scheme.theme_mode);
       
-      let theme_mode = card.querySelector('.modes .theme-mode');
-      theme_mode.title = 'Theme Mode: ' + scheme.theme_mode;
-      theme_mode.innerHTML = scheme.theme_mode === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-      
-      let page_mode = card.querySelector('.modes .page-mode');
-      page_mode.title = 'Page Mode: ' + scheme.page_mode;
-      page_mode.innerHTML = scheme.page_mode === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-      if (scheme.theme_mode === scheme.page_mode) {
-        page_mode.style.display = 'none';
+      let gen_mode = card.querySelector('.modes .gen-mode');
+      gen_mode.dataset.title = 'Generation Mode:';
+      gen_mode.innerHTML = '';
+      if (scheme.gen_mode === 'dual') {
+        gen_mode.innerHTML = '<i class="fas fa-palette"></i>';
+        gen_mode.dataset.title += ' Dual Tone';
+      } else if (scheme.gen_mode === 'colorful') {
+        gen_mode.innerHTML = '<i class="fas fa-swatchbook"></i>';
+        gen_mode.dataset.title += ' Colorful';
       } else {
-        page_mode.style.display = '';
+        gen_mode.innerHTML = '<i class="fas fa-fill"></i>';
+        gen_mode.dataset.title += ' Single Tone';
       }
+      
+      // let theme_mode = card.querySelector('.modes .theme-mode');
+      // theme_mode.title = 'Theme Mode: ' + scheme.theme_mode;
+      // theme_mode.innerHTML = scheme.theme_mode === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+      //
+      // let page_mode = card.querySelector('.modes .page-mode');
+      // page_mode.title = 'Page Mode: ' + scheme.page_mode;
+      // page_mode.innerHTML = scheme.page_mode === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+      // if (scheme.theme_mode === scheme.page_mode) {
+      //   page_mode.style.display = 'none';
+      // } else {
+      //   page_mode.style.display = '';
+      // }
       
       let contrast_mode = card.querySelector('.contrast');
       contrast_mode.innerHTML = scheme.text.contrast_ratio(scheme.panel).toFixed(2);
@@ -357,7 +460,7 @@ function update_ui(data, origin = 'bg', ignore = []) {
   }
   
   
-  const selected_scheme = loaded.get_selected();
+  
   
   const selected_card = scheme_container.querySelector('.scheme-card[data-selected="true"]');
   if (selected_card?.id !== selected_scheme.id) {
@@ -387,13 +490,24 @@ function update_ui(data, origin = 'bg', ignore = []) {
   
   panel_picker.disabled = text_picker.disabled = !selected_scheme.editable;
   btn_surprise.disabled = !selected_scheme.editable;
-  opt_lock.disabled = !selected_scheme.editable;
-  opt_lock.checked = selected_scheme.locked;
+  opt_lock.disabled = selected_scheme.default;
+  opt_lock.checked = selected_scheme.locked || selected_scheme.default;
   
   opt_theme_mode.forEach(radio => {
     radio.checked = (radio.value === selected_scheme.theme_mode);
     radio.disabled = !selected_scheme.editable;
   });
+  
+  opt_gen_mode.forEach(radio => {
+    radio.checked = (radio.value === selected_scheme.gen_mode);
+    radio.disabled = !selected_scheme.editable;
+  });
+  
+  if (selected_scheme.gen_mode === 'dual') {
+    text_picker.container.style.display = '';
+  } else {
+    text_picker.container.style.display = 'none';
+  }
   
 }
 
@@ -403,7 +517,7 @@ bg.then(win => {
   console.log('curr_id', MY_ID, win);
   
   /**@type {QCollection} */
-  let data_loaded = win.data.loaded;
+  let data_loaded = win.get_data_loaded();
   
   options.show_output.checked = data_loaded.options.show_output;
   options.show_output_mode_selector.checked = data_loaded.options.show_output_mode_selector;
@@ -416,30 +530,14 @@ bg.then(win => {
   panel_picker.show_slider_value = text_picker.show_slider_value = data_loaded.options.show_slider_value;
   panel_picker.alpha_enabled = text_picker.alpha_enabled = data_loaded.options.alpha;
   
-  options.show_output.addEventListener('change', ev => {
-    data_loaded.options.show_output = options.show_output.checked;
-    browser.runtime.sendMessage({key: 'update_options', options: data_loaded.options, origin: MY_ID});
-  });
   
-  options.show_output_mode_selector.addEventListener('change', ev => {
-    data_loaded.options.show_output_mode_selector = options.show_output_mode_selector.checked;
-    browser.runtime.sendMessage({key: 'update_options', options: data_loaded.options, origin: MY_ID});
-  });
+  for (let key in options) {
+    options[key].addEventListener('change', ev => {
+      data_loaded.options[key] = options[key].checked;
+      browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
+    });
+  }
   
-  options.show_slider_value.addEventListener('change', ev => {
-    data_loaded.options.show_slider_value = options.show_slider_value.checked;
-    browser.runtime.sendMessage({key: 'update_options', options: data_loaded.options, origin: MY_ID});
-  });
-  
-  options.sync_selected.addEventListener('change', ev => {
-    data_loaded.options.sync_selected = options.sync_selected.checked;
-    browser.runtime.sendMessage({key: 'update_options', options: data_loaded.options, origin: MY_ID});
-  });
-  
-  options.alpha.addEventListener('change', ev => {
-    data_loaded.options.alpha = options.alpha.checked;
-    browser.runtime.sendMessage({key: 'update_options', options: data_loaded.options, origin: MY_ID});
-  });
   
   opt_lock.addEventListener('change', ev => {
     data_loaded.get_selected().locked = opt_lock.checked;
@@ -451,6 +549,17 @@ bg.then(win => {
       if (radio.checked) {
         data_loaded.get_selected().theme_mode = radio.value;
         data_loaded.get_selected().page_mode = radio.value;
+        data_loaded.get_selected().apply();
+        browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
+      }
+    });
+  });
+  
+  opt_gen_mode.forEach(radio => {
+    radio.addEventListener('change', ev => {
+      if (radio.checked) {
+        data_loaded.get_selected().gen_mode = radio.value;
+        data_loaded.get_selected().update_secondary();
         data_loaded.get_selected().apply();
         browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
       }
@@ -471,8 +580,12 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
   if (message.key === 'refresh') {
     const bg = browser.runtime.getBackgroundPage();
     bg.then(win => {
-      let data_loaded = win.data.loaded;
-      update_ui(data_loaded, message.origin, message.ignore);
+      let data_loaded = win.get_data_loaded();
+      try {
+        update_ui(data_loaded, message.origin, message.ignore);
+      } catch (err) {
+        console.error('Failed to update UI', err, data_loaded);
+      }
     });
   }
   
@@ -499,13 +612,17 @@ function set_theme_colors(theme) {
   }
 }
 
-// browser.theme.onUpdated.addListener((info) => {
-//   console.log('Theme updated', info);
-//
-//   if (info.theme.colors) {
-//     set_theme_colors(info.theme);
-//   }
-// });
+browser.theme.onUpdated.addListener((info) => {
+  // console.log('Theme updated', info);
+  if (info.theme.colors) {
+    set_theme_colors(info.theme);
+  }
+});
+
+browser.theme.getCurrent().then(theme => {
+  console.log('Current theme', theme);
+  set_theme_colors(theme);
+});
 
 
 
