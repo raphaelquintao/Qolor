@@ -639,7 +639,46 @@ export class QColor {
   
   
   
-  static hsl_to_oklc(h, s, l, normalized = false) {
+  static hsl_to_oklch(h, s, l, normalized = false) {
+      let rgb = QColor.hsl_to_rgb(h, s, l, normalized);
+      let r = rgb.r / 255.0;
+      let g = rgb.g / 255.0;
+      let b = rgb.b / 255.0;
+      
+      // Convert sRGB to linear RGB
+      r = r <= 0.04045 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+      g = g <= 0.04045 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+      b = b <= 0.04045 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+      
+      // Convert linear RGB to XYZ
+      let x = r * 0.4124564 + g * 0.2126729 + b * 0.0193339;
+      let y = r * 0.2126729 + g * 0.7151522 + b * 0.1191920;
+      let z = r * 0.0193339 + g * 0.1191920 + b * 0.9503041;
+      
+      // Convert XYZ to OKLab
+      let l_ = 0.4122214708 * x + 0.5363325363 * y + 0.0514459929 * z;
+      let m_ = 0.2119034982 * x + 0.6806995451 * y + 0.1073969566 * z;
+      let s_ = 0.0883024619 * x + 0.2817188376 * y + 0.6299787005 * z;
+      
+      l_ = Math.cbrt(l_);
+      m_ = Math.cbrt(m_);
+      s_ = Math.cbrt(s_);
+      
+      let L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+      let A = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+      let B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+      
+      // Convert OKLab to OKLCH
+      let C = Math.sqrt(L * L + B * B);
+      let h_rad = Math.atan2(B, A);
+      let h_deg = (h_rad * 180 / Math.PI + 360) % 360;
+      
+      if (!normalized) {
+        L *= 100;
+        C *= 100;
+      }
+      
+      return {L: L, C: C, h: h_deg};
   }
   
   
