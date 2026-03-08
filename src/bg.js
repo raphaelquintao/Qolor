@@ -1,5 +1,6 @@
-import { QColor } from './libs/QColor.js';
-import { BYTES_TO_STRING, QCollection, QScheme } from "./QUtil.js";
+import { QColor } from './core/q_color.js';
+import { QScheme } from './core/q_scheme.js';
+import { BYTES_TO_STRING, QCollection } from "./core/q_utils.js";
 
 
 // -- RUNTIME SETUP
@@ -9,7 +10,7 @@ let data = {};
 // q.synced = new QCollection();
 data.loaded = new QCollection({
   show_output:               true,
-  show_output_mode_selector: false,
+  show_output_mode_selector: true,
   show_slider_value:         false,
   sync_selected:             true,
   alpha:                     false,
@@ -111,7 +112,7 @@ function open_popout() {
   browser.windows.getLastFocused().then(last => {
     // console.info('Last Focused Window', last);
     browser.windows.create({
-      url:                 browser.runtime.getURL('options.html?view=popout'),
+      url:                 browser.runtime.getURL('options/options.html?view=popout'),
       type:                'popup',
       focused:             true,
       allowScriptsToClose: true,
@@ -198,7 +199,7 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
     browser.windows.getLastFocused().then(last => {
       // console.info('Last Focused Window', last);
       browser.windows.create({
-        url:                 browser.runtime.getURL('options.html?view=popout'),
+        url:                 browser.runtime.getURL('options/options.html?view=popout'),
         type:                'popup',
         focused:             true,
         allowScriptsToClose: true,

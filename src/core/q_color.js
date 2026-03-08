@@ -22,6 +22,69 @@ export class QColor {
     hsl: /^\s*(hsla?)\(\s*((?:3[0-5][0-9]|[0-2]?[0-9]{1,2})(?:\.\d*)?|\.\d+|360(?:\.0*)?)(deg)?\s*(\s*,\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?\s*(\s*,\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?\s*((\s*[,\/]\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?)?\s*\)\s*$/i
   };
   
+  /**
+   *
+   * @type {{[key:string]: {parse: function(string), to_string: function(QColor, number)}}}
+   */
+  static modes = {
+    hsl:   {
+      parse:     (str) => {
+      
+      },
+      to_string: (color, precision) => {
+        const parts = [
+          QColor.to_precision(color.h, precision),
+          QColor.to_precision(color.s, precision) + "%",
+          QColor.to_precision(color.l, precision) + "%",
+        ];
+        if (color.a < 1) parts.push('/', QColor.to_precision(color.a, 2));
+        
+        return `hsl(${parts.join(" ")})`;
+      }
+    },
+    rgb:   {
+      parse:     (str) => {},
+      to_string: (color, precision) => {
+        const rgb = QColor.hsl_to_rgb(color.h, color.s, color.l);
+        const parts = [
+          QColor.to_precision(rgb.r, precision),
+          QColor.to_precision(rgb.g, precision),
+          QColor.to_precision(rgb.b, precision),
+        ];
+        if (color.a < 1) parts.push('/', QColor.to_precision(color.a, 2));
+        
+        return `rgb(${parts.join(" ")})`;
+      }
+    },
+    hex:   {
+      parse:     (str) => {},
+      to_string: (color, precision) => {
+        const rgb = QColor.hsl_to_rgb(color.h, color.s, color.l);
+        let hex = QColor.rgb_to_hex(rgb.r, rgb.g, rgb.b);
+        
+        if (color.a < 1)
+          hex += Math.round(color.a * 255).toString(16).padStart(2, '0').toUpperCase();
+        
+        return hex;
+      }
+    },
+    oklch: {
+      parse:     (str) => {},
+      to_string: (color, precision) => {
+        const oklch = QColor.hsl_to_oklch(color.h, color.s, color.l);
+        const parts = [
+          QColor.to_precision(oklch.l, precision),
+          QColor.to_precision(oklch.c, precision),
+          QColor.to_precision(oklch.h, precision),
+        ];
+        if (color.a < 1) parts.push('/', QColor.to_precision(color.a, 2));
+        
+        return `oklch(${parts.join(' ')})`;
+      }
+    }
+  };
+  
+  
   h = 0.0;
   s = 0.0;
   l = 0.0;
@@ -35,10 +98,10 @@ export class QColor {
   
   /** @param {{h: number?, s: number?, l: number?, a?: number?}} hsla */
   set hsla({h, s, l, a}) {
-    if (h) this.h = h;
-    if (s) this.s = s;
-    if (l) this.l = l;
-    if (a) this.a = a;
+    if (h != null) this.h = h;
+    if (s != null) this.s = s;
+    if (l != null) this.l = l;
+    if (a != null) this.a = a;
   }
   
   
@@ -50,13 +113,11 @@ export class QColor {
   }
   
   set_rgba({r, g, b, a}) {
-    if (!r || !g || !b || !a) {
-      const curr = this.get_rgba();
-      r = r ?? curr.r;
-      g = g ?? curr.g;
-      b = b ?? curr.b;
-      a = a ?? curr.a;
-    }
+    const curr = this.get_rgba();
+    r = r != null ? r : curr.r;
+    g = g != null ? g : curr.g;
+    b = b != null ? b : curr.b;
+    a = a != null ? a : curr.a;
     const hsl = QColor.rgb_to_hsl(r, g, b);
     this.hsla = {...hsl, a};
   }
@@ -72,6 +133,19 @@ export class QColor {
     let hsva = this.get_hsva();
     hsva = {...hsva, ...arguments[0]};
     this.hsla = {...QColor.hsv_to_hsl(hsva.h, hsva.s, hsva.v), a: hsva.a};
+  }
+  
+  // OKLCH
+  
+  /** @returns {{l: number, c: number, h: number, a: number}} */
+  get_oklch() {
+    return {...QColor.hsl_to_oklch(this.h, this.s, this.l), a: this.a};
+  }
+  
+  set_oklch({l, c, h, a}) {
+    let oklch = this.get_oklch();
+    oklch = {...oklch, ...arguments[0]};
+    this.hsla = {...QColor.oklch_to_hsl(oklch.l, oklch.c, oklch.h), a: oklch.a};
   }
   
   
@@ -96,41 +170,14 @@ export class QColor {
   /**
    * Converts the color to a string representation in the specified format.
    * Todo: Consider legacy vs modern formatting for RGB(A) as well.
-   * @param {'hsl'|'rgb'|'hex'} [mode = 'hsl'] Output format: 'hsl', 'rgb', or 'hex'
-   * @param [precision = 5] Number of decimal places for HSL and RGB components (alpha is always 2 decimals)
+   * @param {'hsl'|'rgb'|'hex'|'oklch'} mode Output format: 'hsl', 'rgb', 'hex', or 'oklch'
+   * @param {number} precision of decimal places for HSL and RGB components (alpha is always 2 decimals)
    * @param [legacy = true]
    * @returns {string}
    */
-  to_string(mode = 'hsl', precision = 5, legacy = true) {
+  to_string(mode = 'oklch', precision = 8, legacy = true) {
     mode = mode.toLowerCase();
-    
-    const has_alpha = this.a < 1.0;
-    
-    
-    if (mode === 'rgb') {
-      const rgb = this.get_rgba();
-      if (this.a >= 1.0) {
-        return `rgb(${QColor.to_precision(rgb.r, precision)}, ${QColor.to_precision(rgb.g, precision)}, ${QColor.to_precision(rgb.b, precision)})`;
-      }
-      return `rgba(${QColor.to_precision(rgb.r, precision)}, ${QColor.to_precision(rgb.g, precision)}, ${QColor.to_precision(rgb.b, precision)}, ${QColor.to_precision(rgb.a, 2)})`;
-    } else if (mode === 'hex') {
-      const rgb = this.get_rgba();
-      return QColor.rgb_to_hex(Math.round(rgb.r), Math.round(rgb.g), Math.round(rgb.b)) + (this.a < 1.0 ? Math.round(this.a * 255).toString(16).padStart(2, '0').toUpperCase() : '');
-    } else {
-      const parts = [
-        QColor.to_precision(this.h, precision),
-        QColor.to_precision(this.s, precision) + "%",
-        QColor.to_precision(this.l, precision) + "%",
-      ];
-      if (has_alpha) {
-        const tmp = QColor.to_precision(this.a, 2);
-        parts.push(legacy ? tmp : "/ " + (tmp * 100) + "%");
-      }
-      if (!legacy) return `hsl(${parts.join(' ')})`;
-      
-      return (has_alpha ? 'hsla' : 'hsl') + `(${parts.join(', ')})`;
-    }
-    
+    return QColor.modes[mode].to_string(this, precision);
   }
   
   clone() {
@@ -141,8 +188,17 @@ export class QColor {
     return this.to_string('hsl', 10);
   }
   
-  equals(other_color) {
-    return this.to_string('hsl', 10) === other_color.to_string('hsl', 10);
+  /**
+   * Compares two colors using an epsilon tolerance to avoid floating-point precision issues.
+   * @param {QColor} other_color
+   * @param {number} tolerance
+   * @returns {boolean}
+   */
+  equals(other_color, tolerance = 1e-5) {
+    return Math.abs(this.h - other_color.h) < tolerance
+      && Math.abs(this.s - other_color.s) < tolerance
+      && Math.abs(this.l - other_color.l) < tolerance
+      && Math.abs(this.a - other_color.a) < tolerance;
   }
   
   /**
@@ -233,6 +289,44 @@ export class QColor {
   }
   
   /**
+   * Applies adjustments to the color in OKLCH space.<br>
+   * Expression keys: L (lightness 0-1), C (chroma ~0-0.4), H (hue 0-360), a (alpha 0-1).<br>
+   * Examples: 'L(+0.1)', 'C(-0.05)', 'H(+30)', 'L(0.5)', 'L(+10%) C(-20%)'<br>
+   * With sign (+/-): relative adjustment. Without sign: absolute set.<br>
+   * With %: percentage of current value (signed) or range max (absolute).
+   * @param {string} exp
+   * @returns {QColor}
+   */
+  shade_oklch(exp = 'L(+0) C(+0) H(+0) a(+0)') {
+    let cloned = this.clone();
+    let oklch = cloned.get_oklch();
+    let matches = exp.matchAll(/([LCHa])\((([+-])?[\d.]+)(%?)\)/g);
+    for (let match of matches) {
+      let key = match[1];
+      let sign = match[3] === '+' || match[3] === '-';
+      let val = parseFloat(match[2]);
+      let is_percent = match[4] === '%';
+      if (key === 'L') {
+        let delta = is_percent ? ((sign ? oklch.l : 1) * val / 100.0) : val;
+        oklch.l = this.#clamp(sign ? oklch.l + delta : delta, 0, 1);
+      } else if (key === 'C') {
+        let delta = is_percent ? ((sign ? oklch.c : 0.4) * val / 100.0) : val;
+        oklch.c = Math.max(0, sign ? oklch.c + delta : delta);
+      } else if (key === 'H') {
+        let delta = is_percent ? ((sign ? oklch.h : 360) * val / 100.0) : val;
+        oklch.h = ((sign ? oklch.h + delta : delta) % 360 + 360) % 360;
+      } else if (key === 'a') {
+        let delta = is_percent ? ((sign ? oklch.a : 1) * val / 100.0) : val;
+        oklch.a = this.#clamp(sign ? oklch.a + delta : delta, 0, 1.0);
+      }
+    }
+    // Gamut clamp to keep result within sRGB
+    const clamped = QColor.gamut_clamp_oklch(oklch.l, oklch.c, oklch.h);
+    cloned.set_oklch({l: clamped.l, c: clamped.c, h: clamped.h, a: oklch.a});
+    return cloned;
+  }
+  
+  /**
    * @param {QColor} other_color
    * @param weight
    * @param {'rgb'| 'hsl'} mode
@@ -240,8 +334,7 @@ export class QColor {
    */
   blend(other_color, weight = 0.5, mode = 'hsl') {
     if (weight < 0) weight = 0;
-    if (weight > 1) weight /= 100;
-    if (weight > 100) weight = 100;
+    if (weight > 1) weight = weight > 100 ? 1 : weight / 100;
     
     if (mode === 'hsl') {
       const c1 = this.clone();
@@ -375,10 +468,10 @@ export class QColor {
    */
   luminance() {
     const rgb = this.get_rgba();
-    const linear_rgb = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map((v) => {
-      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * linear_rgb[0] + 0.7152 * linear_rgb[1] + 0.0722 * linear_rgb[2];
+    const lr = QColor.#srgb_to_linear(rgb.r / 255);
+    const lg = QColor.#srgb_to_linear(rgb.g / 255);
+    const lb = QColor.#srgb_to_linear(rgb.b / 255);
+    return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
   }
   
   /**
@@ -393,6 +486,126 @@ export class QColor {
     const lighter = Math.max(L1, L2);
     const darker = Math.min(L1, L2);
     return (lighter + 0.05) / (darker + 0.05);
+  }
+  
+  /**
+   * Perceptual contrast using OKLCH lightness difference.<br>
+   * Returns ΔL (0-1) where 0 = identical lightness, 1 = black vs white.<br>
+   * Not a WCAG metric — use contrast_ratio() for accessibility compliance.
+   * @param {QColor} other_color
+   * @returns {number}
+   */
+  oklch_contrast(other_color) {
+    return Math.abs(this.get_oklch().l - other_color.get_oklch().l);
+  }
+  
+  /**
+   * Modifies a color to ensure a minimum WCAG contrast ratio against a background,
+   * using OKLCH perceptual lightness for the search (converges faster and produces
+   * more perceptually uniform results than HSL-based search).<br>
+   * Falls back to chroma reduction, then grayscale, then black/white.
+   *
+   * @param {QColor} background_color The color to calculate the contrast against.
+   * @param {number} target_ratio Decimal number specifying the minimum contrast ratio.
+   * @returns {QColor}
+   */
+  min_contrast_oklch(background_color, target_ratio = 4.5) {
+    let modified = this.clone();
+    if (modified.a < 1) modified.a = 1;
+    if (modified.contrast_ratio(background_color) >= target_ratio) return modified;
+    
+    /**
+     * Binary search on OKLCH lightness in a given direction.
+     * @param {QColor} color
+     * @param {'lighten'|'darken'} direction
+     * @returns {QColor}
+     */
+    const try_lightness = (color, direction) => {
+      const oklch = color.get_oklch();
+      let lo, hi;
+      if (direction === 'lighten') {
+        lo = oklch.l;
+        hi = 1;
+      } else {
+        lo = 0;
+        hi = oklch.l;
+      }
+      let candidate = color.clone();
+      if (candidate.a < 1) candidate.a = 1;
+      for (let i = 0; i < 50; i++) {
+        let mid = (lo + hi) / 2;
+        const clamped = QColor.gamut_clamp_oklch(mid, oklch.c, oklch.h);
+        candidate.set_oklch({l: clamped.l, c: clamped.c, h: clamped.h});
+        if (candidate.contrast_ratio(background_color) >= target_ratio) {
+          if (direction === 'lighten') hi = mid;
+          else lo = mid;
+        } else {
+          if (direction === 'lighten') lo = mid;
+          else hi = mid;
+        }
+      }
+      const final_l = direction === 'lighten' ? hi : lo;
+      const clamped = QColor.gamut_clamp_oklch(final_l, oklch.c, oklch.h);
+      candidate.set_oklch({l: clamped.l, c: clamped.c, h: clamped.h});
+      return candidate;
+    };
+    
+    /**
+     * Tries both lighten and darken, returns the candidate closest
+     * to the original OKLCH lightness, or null if neither meets the ratio.
+     * @param {QColor} color
+     * @returns {QColor|null}
+     */
+    const best_lightness_candidate = (color) => {
+      const original_l = this.get_oklch().l;
+      const lightened = try_lightness(color, 'lighten');
+      const darkened = try_lightness(color, 'darken');
+      const light_meets = lightened.contrast_ratio(background_color) >= target_ratio;
+      const dark_meets = darkened.contrast_ratio(background_color) >= target_ratio;
+      if (light_meets && dark_meets) {
+        return Math.abs(lightened.get_oklch().l - original_l) <= Math.abs(darkened.get_oklch().l - original_l)
+          ? lightened : darkened;
+      }
+      if (light_meets) return lightened;
+      if (dark_meets) return darkened;
+      return null;
+    };
+    
+    // Phase 1: OKLCH lightness adjustment at current chroma
+    let result = best_lightness_candidate(modified);
+    if (result) return result;
+    
+    // Phase 2: binary search on chroma, retrying lightness at each level
+    const oklch = modified.get_oklch();
+    let c_lo = 0;
+    let c_hi = oklch.c;
+    let best = null;
+    for (let i = 0; i < 50; i++) {
+      let c_mid = (c_lo + c_hi) / 2;
+      let attempt = modified.clone();
+      attempt.set_oklch({c: c_mid});
+      let candidate = best_lightness_candidate(attempt);
+      if (candidate) {
+        best = candidate;
+        c_lo = c_mid; // try to preserve more chroma
+      } else {
+        c_hi = c_mid; // need to reduce chroma further
+      }
+    }
+    if (best && best.contrast_ratio(background_color) >= target_ratio) return best;
+    
+    // Phase 3: achromatic (zero chroma), try lightness
+    let gray = modified.clone();
+    gray.set_oklch({c: 0});
+    result = best_lightness_candidate(gray);
+    if (result) return result;
+    
+    // Phase 4: absolute fallback - black or white
+    let black = this.clone();
+    black.hsla = {h: this.h, s: 0, l: 0, a: 1};
+    let white = this.clone();
+    white.hsla = {h: this.h, s: 0, l: 100, a: 1};
+    return black.contrast_ratio(background_color) > white.contrast_ratio(background_color) ? black : white;
   }
   
   randomize() {
@@ -423,6 +636,10 @@ export class QColor {
       r = Math.round(r * 255);
       g = Math.round(g * 255);
       b = Math.round(b * 255);
+    } else {
+      r = Math.round(r);
+      g = Math.round(r);
+      b = Math.round(r);
     }
     return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
   }
@@ -520,7 +737,6 @@ export class QColor {
     
     let l = v * (1 - s / 2);
     let sl = (l === 0 || l === 1) ? 0 : (v - l) / Math.min(l, 1 - l);
-    if (v === 0) sl = s;
     if (!normalized) {
       sl *= 100;
       l *= 100;
@@ -542,7 +758,6 @@ export class QColor {
     }
     let v = l + s * Math.min(l, 1 - l);
     let sv = (v === 0) ? 0 : 2 * (1 - l / v);
-    if (l === 0) sv = s;
     if (!normalized) {
       sv *= 100;
       v *= 100;
@@ -608,9 +823,6 @@ export class QColor {
       b /= 255.0;
     }
     
-    r = parseFloat(r);
-    g = parseFloat(g);
-    b = parseFloat(b);
     const high = Math.max(r, g, b);
     const low = Math.min(r, g, b);
     let h, s, l = (high + low) / 2.0;
@@ -639,46 +851,203 @@ export class QColor {
   
   
   
+  /**
+   * Converts HSL to OKLCH color space.
+   * @param {number} h Hue (0-360 or 0-1 if normalized)
+   * @param {number} s Saturation (0-100 or 0-1 if normalized)
+   * @param {number} l Lightness (0-100 or 0-1 if normalized)
+   * @param {boolean} normalized
+   * @returns {{l: number, c: number, h: number}} L: 0-1, C: ~0-0.4, H: 0-360
+   */
   static hsl_to_oklch(h, s, l, normalized = false) {
-      let rgb = QColor.hsl_to_rgb(h, s, l, normalized);
-      let r = rgb.r / 255.0;
-      let g = rgb.g / 255.0;
-      let b = rgb.b / 255.0;
-      
-      // Convert sRGB to linear RGB
-      r = r <= 0.04045 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
-      g = g <= 0.04045 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
-      b = b <= 0.04045 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
-      
-      // Convert linear RGB to XYZ
-      let x = r * 0.4124564 + g * 0.2126729 + b * 0.0193339;
-      let y = r * 0.2126729 + g * 0.7151522 + b * 0.1191920;
-      let z = r * 0.0193339 + g * 0.1191920 + b * 0.9503041;
-      
-      // Convert XYZ to OKLab
-      let l_ = 0.4122214708 * x + 0.5363325363 * y + 0.0514459929 * z;
-      let m_ = 0.2119034982 * x + 0.6806995451 * y + 0.1073969566 * z;
-      let s_ = 0.0883024619 * x + 0.2817188376 * y + 0.6299787005 * z;
-      
-      l_ = Math.cbrt(l_);
-      m_ = Math.cbrt(m_);
-      s_ = Math.cbrt(s_);
-      
-      let L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
-      let A = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
-      let B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
-      
-      // Convert OKLab to OKLCH
-      let C = Math.sqrt(L * L + B * B);
-      let h_rad = Math.atan2(B, A);
-      let h_deg = (h_rad * 180 / Math.PI + 360) % 360;
-      
-      if (!normalized) {
-        L *= 100;
-        C *= 100;
+    // Normalize HSL to 0-1 range for internal math
+    if (!normalized) {
+      h /= 360;
+      s /= 100;
+      l /= 100;
+    }
+    const rgb = QColor.hsl_to_rgb(h, s, l, true);
+    const lr = QColor.#srgb_to_linear(rgb.r);
+    const lg = QColor.#srgb_to_linear(rgb.g);
+    const lb = QColor.#srgb_to_linear(rgb.b);
+    const lab = QColor.#linear_srgb_to_oklab(lr, lg, lb);
+    return QColor.#oklab_to_oklch(lab.l, lab.a, lab.b);
+  }
+  
+  /**
+   * Converts OKLCH to HSL color space.
+   * @param {number} l Perceptual lightness (0-1)
+   * @param {number} c Chroma (~0-0.4)
+   * @param {number} h Hue (0-360)
+   * @param {boolean} normalized If true, returns HSL in 0-1 ranges
+   * @returns {{h: number, s: number, l: number}}
+   */
+  static oklch_to_hsl(l, c, h, normalized = false) {
+    const lab = QColor.#oklch_to_oklab(l, c, h);
+    const linear = QColor.#oklab_to_linear_srgb(lab.l, lab.a, lab.b);
+    const r = QColor.#linear_to_srgb(Math.max(0, Math.min(1, linear.r)));
+    const g = QColor.#linear_to_srgb(Math.max(0, Math.min(1, linear.g)));
+    const b = QColor.#linear_to_srgb(Math.max(0, Math.min(1, linear.b)));
+    // rgb values are already 0-1, so always use normalized=true for rgb_to_hsl
+    const hsl = QColor.rgb_to_hsl(r, g, b, true);
+    if (!normalized) {
+      hsl.h *= 360;
+      hsl.s *= 100;
+      hsl.l *= 100;
+    }
+    return hsl;
+  }
+  
+  
+  // --- OKLab / OKLCH internal helpers ---
+  
+  /**
+   * Checks if an OKLCH color is within sRGB gamut.
+   * @param {number} l
+   * @param {number} c
+   * @param {number} h
+   * @returns {boolean}
+   */
+  static #is_in_srgb_gamut(l, c, h) {
+    const lab = QColor.#oklch_to_oklab(l, c, h);
+    const rgb = QColor.#oklab_to_linear_srgb(lab.l, lab.a, lab.b);
+    const EPS = 1e-6;
+    return rgb.r >= -EPS && rgb.r <= 1 + EPS
+      && rgb.g >= -EPS && rgb.g <= 1 + EPS
+      && rgb.b >= -EPS && rgb.b <= 1 + EPS;
+  }
+  
+  /**
+   * Clamps an OKLCH color to sRGB gamut by reducing chroma via binary search.
+   * Preserves lightness and hue as much as possible.
+   * @param {number} l
+   * @param {number} c
+   * @param {number} h
+   * @returns {{l: number, c: number, h: number}}
+   */
+  static gamut_clamp_oklch(l, c, h) {
+    // Clamp L to valid range
+    l = Math.max(0, Math.min(1, l));
+    
+    // Black/white have no chroma
+    if (l <= 0) return {l: 0, c: 0, h};
+    if (l >= 1) return {l: 1, c: 0, h};
+    
+    // Already in gamut
+    if (QColor.#is_in_srgb_gamut(l, c, h)) return {l, c, h};
+    
+    // Binary search on chroma
+    let lo = 0;
+    let hi = c;
+    for (let i = 0; i < 30; i++) {
+      const mid = (lo + hi) / 2;
+      if (QColor.#is_in_srgb_gamut(l, mid, h)) {
+        lo = mid;
+      } else {
+        hi = mid;
       }
-      
-      return {L: L, C: C, h: h_deg};
+    }
+    return {l, c: lo, h};
+  }
+  
+  /**
+   * sRGB component (0-1) to linear sRGB.
+   * @param {number} v
+   * @returns {number}
+   */
+  static #srgb_to_linear(v) {
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  }
+  
+  /**
+   * Linear sRGB component to sRGB (0-1).
+   * @param {number} v
+   * @returns {number}
+   */
+  static #linear_to_srgb(v) {
+    return v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+  }
+  
+  /**
+   * Linear sRGB (0-1 each) to OKLab.
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   * @returns {{l: number, a: number, b: number}}
+   */
+  static #linear_srgb_to_oklab(r, g, b) {
+    // M1: linear sRGB → LMS
+    let lms_l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+    let lms_m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+    let lms_s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+    
+    // Cube root
+    lms_l = Math.cbrt(lms_l);
+    lms_m = Math.cbrt(lms_m);
+    lms_s = Math.cbrt(lms_s);
+    
+    // M2: LMS^(1/3) → OKLab
+    return {
+      l: 0.2104542553 * lms_l + 0.7936177850 * lms_m - 0.0040720468 * lms_s,
+      a: 1.9779984951 * lms_l - 2.4285922050 * lms_m + 0.4505937099 * lms_s,
+      b: 0.0259040371 * lms_l + 0.7827717662 * lms_m - 0.8086757660 * lms_s,
+    };
+  }
+  
+  /**
+   * OKLab to linear sRGB (0-1 each, may exceed gamut).
+   * @param {number} l
+   * @param {number} a
+   * @param {number} b
+   * @returns {{r: number, g: number, b: number}}
+   */
+  static #oklab_to_linear_srgb(l, a, b) {
+    // M2⁻¹: OKLab → LMS^(1/3)
+    let lms_l = l + 0.3963377774 * a + 0.2158037573 * b;
+    let lms_m = l - 0.1055613458 * a - 0.0638541728 * b;
+    let lms_s = l - 0.0894841775 * a - 1.2914855480 * b;
+    
+    // Cube
+    lms_l = lms_l * lms_l * lms_l;
+    lms_m = lms_m * lms_m * lms_m;
+    lms_s = lms_s * lms_s * lms_s;
+    
+    // M1⁻¹: LMS → linear sRGB
+    return {
+      r: 4.0767416621 * lms_l - 3.3077115913 * lms_m + 0.2309699292 * lms_s,
+      g: -1.2684380046 * lms_l + 2.6097574011 * lms_m - 0.3413193965 * lms_s,
+      b: -0.0041960863 * lms_l - 0.7034186147 * lms_m + 1.7076147010 * lms_s,
+    };
+  }
+  
+  /**
+   * OKLab (L, a, b) to OKLCH (L, C, H).
+   * @param {number} l
+   * @param {number} a
+   * @param {number} b
+   * @returns {{l: number, c: number, h: number}} L: 0-1, C: ~0-0.4, H: 0-360
+   */
+  static #oklab_to_oklch(l, a, b) {
+    const c = Math.sqrt(a * a + b * b);
+    let h = Math.atan2(b, a) * 180 / Math.PI;
+    if (h < 0) h += 360;
+    return {l, c, h};
+  }
+  
+  /**
+   * OKLCH (L, C, H) to OKLab (L, a, b).
+   * @param {number} l
+   * @param {number} c
+   * @param {number} h Hue in degrees (0-360)
+   * @returns {{l: number, a: number, b: number}}
+   */
+  static #oklch_to_oklab(l, c, h) {
+    const rad = h * Math.PI / 180;
+    return {
+      l,
+      a: c * Math.cos(rad),
+      b: c * Math.sin(rad),
+    };
   }
   
   

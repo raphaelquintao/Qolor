@@ -1,6 +1,6 @@
-import { QColor } from './libs/QColor.js';
-import { QPicker, QSlider } from './libs/QPicker.js';
-import { QCollection, UUID } from "./QUtil.js";
+import { QColor } from '../src/core/q_color.js';
+import { QPicker, QSlider } from '../src/core/q_picker.js';
+import { QCollection, UUID } from "../src/core/q_utils.js";
 
 // -- SETUP ---
 const URL_SEARCH_PARAMS = new URLSearchParams(window.location.search);
@@ -601,13 +601,13 @@ function set_theme_colors(theme) {
     console.info('View param:', view);
     if (view === 'sidebar') {
       document.body.parentElement.style.setProperty('--q-base', theme.colors.sidebar);
-      document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.sidebar_text);
+      // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.sidebar_text);
     } else if (view === 'popup') {
       document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
-      document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
+      // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
     } else {
       document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
-      document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
+      // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
     }
   }
 }

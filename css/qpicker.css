@@ -143,14 +143,13 @@
       content: "";
       opacity: var(--qp-alpha, 1);
       border-radius: 50%;
-      background-image: radial-gradient(circle at center in hsl, hsl(0, 0%, 100%), hsl(0, 0%, 15%)),
+      background-image: radial-gradient(circle closest-side, white, transparent),
       conic-gradient(from 0deg in hsl longer hue, red, red);
       background-repeat: no-repeat no-repeat;
       background-clip: content-box !important;
       background-size: 100% 100%;
       box-shadow: var(--q-hl-in-shadow);
       /*border: var(--qp-border);*/
-      background-blend-mode: hard-light;
     }
   }
 
@@ -396,6 +395,7 @@
     flex: 1;
     justify-content: center;
     gap: 0.3em;
+    flex-wrap: wrap;
   }
 
   .qp-output-value {

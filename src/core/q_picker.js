@@ -1,4 +1,4 @@
-import { QColor } from './QColor.js';
+import { QColor } from './q_color.js';
 
 export class QPickerEvent extends Event {
   /** @type {QColor} */
@@ -242,7 +242,7 @@ export class QSlider extends EventTarget {
  * @property {boolean} [alpha] - Whether to include alpha channel
  * @property {number} [area_size] - Size of the color area (in pixels)
  * @property {'hsl'|'hsv'} [picker_mode] - Internal mode for sliders and color manipulation
- * @property {'hsl'|'hex'|'rgb'} [output_mode] - Format for output value
+ * @property {'hsl'|'hex'|'rgb','oklch'} [output_mode] - Format for output value
  * @property {boolean} [show_output] - Whether to show the output value
  * @property {boolean} [show_output_mode_selector] - Whether to show the output mode selector
  * @property {boolean} [show_slider_value] - Whether to show the current value on sliders
@@ -271,6 +271,8 @@ export class QPicker extends EventTarget {
     disabled:                  false,
     precision:                 2,
   };
+  
+  static #OUTPUT_MODES = Object.keys(QColor.modes);
   
   // ---- Options ----
   
@@ -319,6 +321,11 @@ export class QPicker extends EventTarget {
   }
   
   set output_mode(mode) {
+    if(!QPicker.#OUTPUT_MODES.includes(mode)) {
+      console.warn(`Invalid output mode: ${mode}`);
+      return;
+    }
+    this.#options.output_mode = mode;
     for (let r of this.out_modes) {
       r.checked = (r.value === mode);
     }
@@ -406,7 +413,7 @@ export class QPicker extends EventTarget {
   
   
   
- 
+  
   
   #setup_color_area() {
     if (this.#options.picker_mode === 'hsl') {
@@ -488,7 +495,7 @@ export class QPicker extends EventTarget {
     this._label.classList.add('qp-label');
     this._label.textContent = this.#options.label;
     this.container.append(this._label);
-    if(this.#options.label) {
+    if (this.#options.label) {
       this._label.style.display = '';
     } else {
       this._label.style.display = 'none';
@@ -498,34 +505,26 @@ export class QPicker extends EventTarget {
     
     this.out_container = document.createElement('div');
     this.out_container.classList.add('qp-output');
-    
     this.out_mode_selector = document.createElement('div');
     this.out_mode_selector.classList.add('qp-output-mode-selector');
     
-    this.out_mode_hsla = document.createElement('input');
-    this.out_mode_hsla.type = 'radio';
-    this.out_mode_hsla.value = 'hsl';
-    this.out_mode_hsla.checked = true;
-    this.out_mode_hsla_label = document.createElement('label');
-    this.out_mode_hsla_label.innerText = 'HSL';
-    this.out_mode_hsla_label.prepend(this.out_mode_hsla);
+    /** @type {HTMLInputElement[]} */
+    this.out_modes = [];
     
-    this.out_mode_hex = document.createElement('input');
-    this.out_mode_hex.type = 'radio';
-    this.out_mode_hex.value = 'hex';
-    this.out_mode_hex_label = document.createElement('label');
-    this.out_mode_hex_label.innerText = 'HEX';
-    this.out_mode_hex_label.prepend(this.out_mode_hex);
+    for (let mode of QPicker.#OUTPUT_MODES) {
+      let radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = `qp-output-mode-${crypto.randomUUID()}`;
+      radio.value = mode;
+      radio.checked = false;
+      let label = document.createElement('label');
+      label.innerText = mode.toUpperCase();
+      label.prepend(radio);
+      this.out_mode_selector.append(label);
+      this.out_modes.push(radio);
+    }
     
-    this.out_mode_rgba = document.createElement('input');
-    this.out_mode_rgba.type = 'radio';
-    this.out_mode_rgba.value = 'rgb';
-    this.out_mode_rgba_label = document.createElement('label');
-    this.out_mode_rgba_label.innerText = 'RGB';
-    this.out_mode_rgba_label.prepend(this.out_mode_rgba);
     
-    this.out_modes = [this.out_mode_hsla, this.out_mode_hex, this.out_mode_rgba];
-    this.out_mode_selector.append(this.out_mode_hsla_label, this.out_mode_hex_label, this.out_mode_rgba_label);
     this.out_container.append(this.out_mode_selector);
     
     this.output_value = document.createElement('div');

@@ -9,7 +9,7 @@
     "url": "https://github.com/raphaelquintao"
   },
   "icons": {
-    "250": "assets/icon.png"
+    "250": "assets/icons/icon.png"
   },
   "incognito": "spanning",
   "permissions": [
@@ -20,19 +20,19 @@
     "management"
   ],
   "background": {
-    "scripts": ["js/bg.js"],
+    "scripts": ["src/bg.js"],
     "type": "module",
     "persistent": true
   },
   "browser_action": {
     "browser_style": false,
-    "default_icon": "assets/icon_colored.svg",
-    "default_popup": "options.html?view=popup"
+    "default_icon": "assets/icons/icon.png",
+    "default_popup": "options/options.html?view=popup"
   },
   
   "sidebar_action": {
-    "default_panel": "options.html?view=sidebar",
-    "default_icon": "assets/icon_colored.svg",
+    "default_icon": "assets/icons/icon.png",
+    "default_panel": "options/options.html?view=sidebar",
     "browser_style": false
   },
   "browser_specific_settings": {
