@@ -1,56 +1,59 @@
 :root {
-  font-family: var(--q-font-family-sans), sans-serif;
+  --q-font-family-sans: Inter, sans-serif;
+  --q-font-family-mono: "JetBrains Mono", monospace;
 
-  /* BASE */
-  font-size: 14px;
-  font-weight: 400;
+  @supports (font-variation-settings: normal) {
+    --q-font-family-sans: "InterVariable", sans-serif;
+  }
+
+
+  /* BASE Color */
+  --q-base: hsl(240, 14%, 19%);
 
   /* Core */
-  line-height: normal;
-  --q-border-radius: 3px;
-  --q-base: hsl(240, 14%, 19%);
+  --q-bg-color: oklch(from var(--q-base) l c h / 1);
+  --q-fg-color: oklch(from var(--q-base) calc(l + 0.5) 4% h);
+
 
 
   /* Input */
-  --q-contrast-base: contrast-color(var(--q-base));
-
-
-  --q-bg-color: oklch(from var(--q-base) l c h / 1);
-  --q-fg-color: oklch(from var(--q-base) calc((1 + l) / 2 * 1.8) 4% h);
-
-  --q-input-height: 2rem;
-  --q-input-font-size: 0.875rem;
-  --q-input-bg-color: hsl(from var(--q-base) h s calc(l - 9));
-  --q-input-bg-color: oklch(from var(--q-base) calc(l * 0.8) c h);
-  --q-input-border-color: hsl(from var(--q-base) h s 1%);
+  --q-input-height: 2em;
+  --q-input-font-size: 0.875em;
+  --q-input-bg-color: oklch(from var(--q-base) calc(l - 0.07) c h);
+  --q-input-border-color: oklch(from var(--q-base) 1% c h);
   --q-input-fg-color: inherit;
   --q-input-hover-bg-color: hsl(from var(--q-base) h s calc(l - 10));
   --q-input-focus-bg-color: hsl(from var(--q-base) h s calc(l - 11));
 
 
   /* Button */
-  --q-button-font-size: 0.875rem;
-  --q-button-bg-color: hsl(from var(--q-base) h s calc(l + 10));
-  --q-button-bg-color: oklch(from var(--q-base) calc((0 + l) + 0.1) c h);
-  --q-button-border-color: hsl(from var(--q-base) h s 1%);
+  --q-button-font-size: 0.875em;
+  --q-button-bg-color: oklch(from var(--q-base) calc(l + 0.1) c h);
+  --q-button-border-color: oklch(from var(--q-base) 1% c h);
   --q-button-fg-color: inherit;
-  --q-button-hover-bg-color: hsl(from var(--q-base) h s calc(l + 13));
-  --q-button-active-bg-color: hsl(from var(--q-base) h s calc(l - 9));
+  --q-button-hover-bg-color: oklch(from var(--q-base) calc(l + 0.15) c h);
+  --q-button-active-bg-color: oklch(from var(--q-base) calc(l - 0.1) c h);
 
 
   /* Shadows */
   --q-hl-glow: 0px 1px 0px 0px hsl(from var(--q-bg-color) h s 80% / 7%);
   --q-hl-out-shadow: inset 0px 1px 0px 0px hsl(from var(--q-bg-color) h s 80% / 8%), var(--q-hl-glow);
-
   --q-hl-in-shadow: inset 0px 1px 3px -1px black, var(--q-hl-glow);
+  --q-text-shadow: none;
+
+  /* Others */
+  --q-border-radius: 3px;
+
 
   /* === Global === */
-  --q-text-shadow: none;
-  --q-font-family-sans: Inter, sans-serif;
-  --q-font-family-mono: "JetBrains Mono", monospace;
+  font-family: var(--q-font-family-sans), sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  font-optical-sizing: auto;
+  line-height: normal;
+
 
   ::selection {
-    /*background: hsla(from var(--q-base) h 40% 75% / 0.5);*/
     color: currentColor;
     border: 1px solid red;
     background: hsla(from var(--q-fg-color) h s l / 0.25);
@@ -58,7 +61,7 @@
   }
 
   scrollbar-width: thin;
-  scrollbar-color: hsla(from currentColor h s l / 0.2) transparent;
+  scrollbar-color: oklch(from currentColor l c h / 0.2) transparent;
 }
 
 * {
@@ -123,7 +126,7 @@ a {
   }
 
   &:visited {
-    color: hsl(from var(--q-fg-color) h s 65%);
+    color: oklch(from var(--q-fg-color) calc(l * 0.5) c h);
   }
 }
 
@@ -193,7 +196,7 @@ hr {
   margin: 0;
   border: 0;
   /*display: block;*/
-  border-top: 0 solid #000000;
+  border-top: 0 solid var(--q-input-border-color);
   background-color: black;
   box-shadow: var(--q-hl-out-shadow);
 }
@@ -261,7 +264,7 @@ textarea {
   border: 1px solid transparent;
 
   &[contenteditable="true"]:not(:focus) {
-    border-bottom: 1px dashed hsla(from currentColor h s l / 0.4);
+    border-bottom: 1px dashed oklch(from currentColor l c h / 0.4);
   }
 
   &:focus {
@@ -296,7 +299,7 @@ input[type="checkbox"] {
   /*line-height: 1;*/
   border: 1px solid var(--q-input-border-color);
   border-radius: var(--q-border-radius);
-  background: hsl(from var(--q-input-bg-color) h s calc(l * 1.10));
+  background: var(--q-input-bg-color);
   box-shadow: var(--q-hl-in-shadow);
   appearance: none;
   place-content: center;
@@ -308,7 +311,7 @@ input[type="checkbox"] {
   }
 
   &:hover:not(:disabled, :checked) {
-    background: hsl(from var(--q-button-bg-color) h s l / 0.6);
+    background: oklch(from var(--q-button-bg-color) l c h / 0.6);
   }
 
   &::after {
@@ -367,7 +370,6 @@ input[type="reset"] {
   justify-content: center;
   min-width: var(--q-input-height);
   height: var(--q-input-height);
-  /*font-size: 1rem;*/
   padding: 0 0.5em;
   cursor: pointer;
   user-select: none;
@@ -411,7 +413,7 @@ input[type="reset"] {
     &:has(.btn:checked),
     &:open, &:active, &:checked, &[data-selected="true"] {
       z-index: 1;
-      color: contrast-color(var(--q-button-active-bg-color));
+      /*color: contrast-color(var(--q-button-active-bg-color));*/
       background-color: var(--q-button-active-bg-color);
       box-shadow: var(--q-hl-in-shadow);
       text-shadow: none;
@@ -436,7 +438,7 @@ input[type="reset"] {
     &:not(:disabled) {
       &:hover, &:active, &:focus {
         opacity: 1;
-        color: hsla(from currentColor h s l / 1);
+        color: oklch(from currentColor l c h / 1);
         background: transparent !important;
         box-shadow: none;
         text-shadow: var(--q-text-shadow);
@@ -482,13 +484,9 @@ select {
 
   box-shadow: var(--q-hl-in-shadow);
 
-  --pad: 0px;
   gap: 0;
-  padding-block: var(--pad);
-  /*border-radius: calc(var(--q-border-radius) + var(--pad));*/
-  /*height: var(--q-input-height);*/
 
-  --q-input-inner-height: calc(var(--q-input-height) - var(--pad) * 2 - 2px) !important;
+  --q-input-inner-height: calc(var(--q-input-height) - 2px) !important;
 
 
   button,
@@ -519,7 +517,7 @@ select {
         &:has(.btn:not(:open, :active, :checked, [data-selected="true"])),
         &:not(:open, :active, :checked, [data-selected="true"]) {
           border: 1px solid var(--q-button-border-color) !important;
-          background: hsl(from var(--q-button-bg-color) h s l / 0.6) !important;
+          background: oklch(from var(--q-button-bg-color) l c h / 0.6) !important;
         }
       }
 
@@ -543,7 +541,6 @@ select {
 
 .grid {
   display: grid;
-  /*gap: 0.5rem;*/
 
   &.grid-cols-2 {
     grid-template-columns: repeat(2, 1fr);
@@ -584,7 +581,6 @@ select {
 
 .flex {
   display: flex;
-  /*gap: 0.5rem;*/
 
   &.flex-row {
     flex-direction: row;

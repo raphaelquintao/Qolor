@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="250px" height="250px"
+     viewBox="0 0 260 260"
+>
+  <defs>
+    <filter id="inset-shadow">
+      <feOffset dx='0' dy='10'/>
+      <feGaussianBlur stdDeviation='1' result='offset-blur'/>
+
+      <!-- Invert the drop shadow
+           to create an inner shadow -->
+      <feComposite operator='out' in='SourceGraphic' in2='offset-blur' result='inverse'/>
+
+      <!-- Color & Opacity -->
+      <feFlood
+          flood-color='hsl(325, 73%, 67%)'
+          flood-opacity='1'
+          result='color'
+      />
+
+      <!-- Clip color inside shadow -->
+      <feComposite
+          operator='in'
+          in='color'
+          in2='inverse'
+          result='shadow'
+      />
+
+      <!-- Put shadow over original object -->
+      <feComposite
+          operator='over'
+          in='shadow'
+          in2='SourceGraphic'
+      />
+
+    </filter>
+    <linearGradient id="grad1"
+                    x1="0" y1="0"
+                    x2="100%" y2="100%"
+                    style="transform: rotate(0deg); transform-origin: 0px 0px;"
+    >
+      <stop offset="0" stop-color="#F26878"/>
+      <stop offset="1" stop-color="#CD3F59"/>
+
+    </linearGradient>
+
+    <linearGradient id="secondary" x1="0" y1="0" x2="100%" y2="100%">
+      <stop offset="0" stop-color="hsl(0 50% 50%)"/>
+
+      <stop offset="1" stop-color="hsl(240 50% 50%)"/>
+    </linearGradient>
+
+    <radialGradient id="grad2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="hsl(240 50% 50%)"/>
+      <stop offset="100%" stop-color="hsl(240 50% 30%)"/>
+    </radialGradient>
+
+    <filter id="blur-shadow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feOffset dx="0" dy="2" result="offsetBlur"/>
+      <feFlood flood-color="hsl(325 73% 67%)" flood-opacity="0.5" result="color"/>
+      <feComposite operator="in" in="color" in2="offsetBlur" result="shadow"/>
+      <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+    </filter>
+
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="1"/>
+    </filter>
+
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="0" stdDeviation="1"
+                    flood-color="hsl(325 73% 0%)"
+                    flood-opacity="0.9"/>
+    </filter>
+
+
+  </defs>
+
+  <rect width="100%" height="100%" fill="hsl(240 0% 12%)"/>
+
+
+  <circle cx="50%" cy="50%" r="calc(50% - 20px - 10px)"
+          filter="url(#shadow)"
+          stroke="url(#secondary)"
+          stroke-width="40"
+          fill="none"
+  />
+
+
+  <rect width="50" height="125" x="calc(50% - 25px)" y="50%" ry="25" rx="25"
+        style="transform: rotateZ(-45deg); transform-origin: 50% 50%;"
+        filter="url(#shadow)"
+        fill="url(#secondary)"
+        stroke="hsl(0 0% 0%)" stroke-width="0"
+  >
+
+
+  </rect>
+</svg>

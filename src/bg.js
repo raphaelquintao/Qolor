@@ -81,12 +81,12 @@ data.loaded.add(light_pink2, false);
 data.loaded.add(purple, false);
 data.loaded.add(red, false);
 
-data.loaded.add(new QScheme(), false);
-data.loaded.add(new QScheme(), false);
-data.loaded.add(new QScheme(), false);
+data.loaded.add(new QScheme().update_secondary(), false);
+data.loaded.add(new QScheme().update_secondary(), false);
+data.loaded.add(new QScheme().update_secondary(), false);
 data.loaded.add(broken, false);
-data.loaded.add(new QScheme(), true);
-data.loaded.add(new QScheme(), false);
+data.loaded.add(new QScheme().update_secondary(), true);
+data.loaded.add(new QScheme().update_secondary(), false);
 
 let serialized = data.loaded.serialize();
 let temp = QCollection.unserialize(serialized);
@@ -255,6 +255,14 @@ function lixo(changeInfo) {
 
 browser.browserSettings.verticalTabs.onChange.addListener(lixo);
 
+browser.browserSettings.overrideContentColorScheme
+  .set({ value: "auto" })
+  .then(value => {
+    console.info(`Setting was modified: ${value}`);
+  });
+
+
+
 
 // -- Main
 async function main() {
@@ -271,7 +279,7 @@ async function main() {
   
   let c1 = new QColor('hsl(240, 15%, 50%)');
   let c2 = new QColor('hsl(325, 50%, 30%)');
-  let bg = new QColor('hsl(240, 17%, 11%)');
+  let bg = new QColor('hsl(240, 17%, 0%)');
   console.log('rgb',
     c1.blend(c2, 0.3, 'rgb').to_string(),
     c2.blend(c1, 0.3, 'rgb').to_string()
@@ -280,10 +288,9 @@ async function main() {
     c1.blend(c2, 0.3).to_string(),
     c2.blend(c1, 0.3).to_string()
   );
-  const n = bg.min_contrast_color(bg, 5.0);
+  const n = new QColor('#B5835A80');
   console.log('contrast',
-    JSON.stringify(n),
-    bg.contrast_ratio(n)
+    bg.contrast_ratio(n).toFixed(2)
   );
   
   

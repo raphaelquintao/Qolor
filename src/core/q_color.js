@@ -33,11 +33,11 @@ export class QColor {
       },
       to_string: (color, precision) => {
         const parts = [
-          QColor.to_precision(color.h, precision),
-          QColor.to_precision(color.s, precision) + "%",
-          QColor.to_precision(color.l, precision) + "%",
+          QColor.#to_fixed(color.h, precision),
+          QColor.#to_fixed(color.s, precision) + "%",
+          QColor.#to_fixed(color.l, precision) + "%",
         ];
-        if (color.a < 1) parts.push('/', QColor.to_precision(color.a, 2));
+        if (color.a < 1) parts.push('/', QColor.#to_fixed(color.a, 2));
         
         return `hsl(${parts.join(" ")})`;
       }
@@ -47,11 +47,11 @@ export class QColor {
       to_string: (color, precision) => {
         const rgb = QColor.hsl_to_rgb(color.h, color.s, color.l);
         const parts = [
-          QColor.to_precision(rgb.r, precision),
-          QColor.to_precision(rgb.g, precision),
-          QColor.to_precision(rgb.b, precision),
+          QColor.#to_fixed(rgb.r, precision),
+          QColor.#to_fixed(rgb.g, precision),
+          QColor.#to_fixed(rgb.b, precision),
         ];
-        if (color.a < 1) parts.push('/', QColor.to_precision(color.a, 2));
+        if (color.a < 1) parts.push('/', QColor.#to_fixed(color.a, 2));
         
         return `rgb(${parts.join(" ")})`;
       }
@@ -73,11 +73,11 @@ export class QColor {
       to_string: (color, precision) => {
         const oklch = QColor.hsl_to_oklch(color.h, color.s, color.l);
         const parts = [
-          QColor.to_precision(oklch.l, precision),
-          QColor.to_precision(oklch.c, precision),
-          QColor.to_precision(oklch.h, precision),
+          QColor.#to_fixed(oklch.l, precision),
+          QColor.#to_fixed(oklch.c, precision),
+          QColor.#to_fixed(oklch.h, precision),
         ];
-        if (color.a < 1) parts.push('/', QColor.to_precision(color.a, 2));
+        if (color.a < 1) parts.push('/', QColor.#to_fixed(color.a, 2));
         
         return `oklch(${parts.join(' ')})`;
       }
@@ -146,6 +146,7 @@ export class QColor {
     let oklch = this.get_oklch();
     oklch = {...oklch, ...arguments[0]};
     this.hsla = {...QColor.oklch_to_hsl(oklch.l, oklch.c, oklch.h), a: oklch.a};
+    return this;
   }
   
   
@@ -265,9 +266,9 @@ export class QColor {
    */
   shade(exp = 'h(+10%) s(-10%) l(+10%) a(+0%)') {
     let cloned = this.clone();
-    let matches = exp.matchAll(/([hsla])\((([+-])?[\d.]+)(%?)\)/g);
+    let matches = exp.matchAll(/([hsla])\((([+-])?[\d.]+)(%?)\)/gi);
     for (let match of matches) {
-      let mode = match[1];
+      let mode = match[1].toLowerCase();
       let sign = match[3] === '+' || match[3] === '-';
       let val = parseFloat(match[2]);
       let is_percent = match[4] === '%';
@@ -297,22 +298,22 @@ export class QColor {
    * @param {string} exp
    * @returns {QColor}
    */
-  shade_oklch(exp = 'L(+0) C(+0) H(+0) a(+0)') {
+  shade_oklch(exp = 'l(+0) c(+0) h(+0) a(+0)') {
     let cloned = this.clone();
     let oklch = cloned.get_oklch();
-    let matches = exp.matchAll(/([LCHa])\((([+-])?[\d.]+)(%?)\)/g);
+    let matches = exp.matchAll(/([lcha])\((([+-])?[\d.]+)(%?)\)/gi);
     for (let match of matches) {
-      let key = match[1];
+      let key = match[1].toLowerCase();
       let sign = match[3] === '+' || match[3] === '-';
       let val = parseFloat(match[2]);
       let is_percent = match[4] === '%';
-      if (key === 'L') {
+      if (key === 'l') {
         let delta = is_percent ? ((sign ? oklch.l : 1) * val / 100.0) : val;
         oklch.l = this.#clamp(sign ? oklch.l + delta : delta, 0, 1);
-      } else if (key === 'C') {
+      } else if (key === 'c') {
         let delta = is_percent ? ((sign ? oklch.c : 0.4) * val / 100.0) : val;
         oklch.c = Math.max(0, sign ? oklch.c + delta : delta);
-      } else if (key === 'H') {
+      } else if (key === 'h') {
         let delta = is_percent ? ((sign ? oklch.h : 360) * val / 100.0) : val;
         oklch.h = ((sign ? oklch.h + delta : delta) % 360 + 360) % 360;
       } else if (key === 'a') {
@@ -329,7 +330,7 @@ export class QColor {
   /**
    * @param {QColor} other_color
    * @param weight
-   * @param {'rgb'| 'hsl'} mode
+   * @param {'rgb'| 'hsl', 'oklch'} mode
    * @returns {QColor}
    */
   blend(other_color, weight = 0.5, mode = 'hsl') {
@@ -346,6 +347,18 @@ export class QColor {
       const a = c1.a * (1 - weight) + c2.a * weight;
       const blended = new QColor();
       blended.hsla = {h, s, l, a};
+      return blended;
+    }
+    
+    if(mode === 'oklch') {
+      const c1 = this.get_oklch();
+      const c2 = other_color.get_oklch();
+      const l = (c1.l * (1 - weight) + c2.l * weight);
+      const c = (c1.c * (1 - weight) + c2.c * weight);
+      const h = (c1.h * (1 - weight) + c2.h * weight);
+      const a = c1.a * (1 - weight) + c2.a * weight;
+      const blended = new QColor();
+      blended.set_oklch({l, c, h, a});
       return blended;
     }
     
@@ -371,7 +384,7 @@ export class QColor {
    */
   min_contrast_color(background_color, contrast_ratio = 4.5) {
     let modified = this.clone();
-    if (modified.a < 1) modified.a = 1;
+    // if (modified.a < 1) modified.a = 1;
     if (modified.contrast_ratio(background_color) >= contrast_ratio) return modified;
     /**
      * Binary search on lightness in a given direction for a color.
@@ -390,7 +403,7 @@ export class QColor {
         hi = color.l;
       }
       let candidate = color.clone();
-      if (candidate.a < 1) candidate.a = 1;
+      // if (candidate.a < 1) candidate.a = 1;
       for (let i = 0; i < 50; i++) {
         let mid = (lo + hi) / 2;
         candidate.l = mid;
@@ -477,12 +490,15 @@ export class QColor {
   /**
    * Calculates the contrast ratio between this color and another color.
    * Where 1 is no contrast and 21 is maximum contrast (black vs white)
-   * @param {QColor} other_color
+   * @param {QColor} foreground_color
    * @returns {number}
    */
-  contrast_ratio(other_color) {
+  contrast_ratio(foreground_color) {
     const L1 = this.luminance();
-    const L2 = other_color.luminance();
+    let L2 = (foreground_color.a < 1) ?
+      this.blend(foreground_color, foreground_color.a, 'rgb').luminance() :
+      foreground_color.luminance();
+    
     const lighter = Math.max(L1, L2);
     const darker = Math.min(L1, L2);
     return (lighter + 0.05) / (darker + 0.05);
@@ -511,7 +527,7 @@ export class QColor {
    */
   min_contrast_oklch(background_color, target_ratio = 4.5) {
     let modified = this.clone();
-    if (modified.a < 1) modified.a = 1;
+    // if (modified.a < 1) modified.a = 1;
     if (modified.contrast_ratio(background_color) >= target_ratio) return modified;
     
     /**
@@ -531,7 +547,7 @@ export class QColor {
         hi = oklch.l;
       }
       let candidate = color.clone();
-      if (candidate.a < 1) candidate.a = 1;
+      // if (candidate.a < 1) candidate.a = 1;
       for (let i = 0; i < 50; i++) {
         let mid = (lo + hi) / 2;
         const clamped = QColor.gamut_clamp_oklch(mid, oklch.c, oklch.h);
@@ -1056,7 +1072,7 @@ export class QColor {
    * @param {number} precision
    * @returns {number}
    */
-  static to_precision(value, precision) {
+  static #to_fixed(value, precision) {
     return parseFloat(value.toFixed(precision));
   }
   

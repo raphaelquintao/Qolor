@@ -262,7 +262,7 @@ export class QPicker extends EventTarget {
     label:                     "",
     alpha:                     false,
     area_size:                 140,
-    picker_mode:               'hsl',
+    picker_mode:               'hsv',
     output_mode:               'hsl',
     show_output:               true,
     show_output_mode_selector: true,
@@ -506,7 +506,7 @@ export class QPicker extends EventTarget {
     this.out_container = document.createElement('div');
     this.out_container.classList.add('qp-output');
     this.out_mode_selector = document.createElement('div');
-    this.out_mode_selector.classList.add('qp-output-mode-selector');
+    this.out_mode_selector.classList.add('qp-output-mode-selector' , 'button-toolbar');
     
     /** @type {HTMLInputElement[]} */
     this.out_modes = [];
@@ -516,6 +516,7 @@ export class QPicker extends EventTarget {
       radio.type = 'radio';
       radio.name = `qp-output-mode-${crypto.randomUUID()}`;
       radio.value = mode;
+      radio.classList.add('btn');
       radio.checked = false;
       let label = document.createElement('label');
       label.innerText = mode.toUpperCase();
@@ -701,7 +702,7 @@ export class QPicker extends EventTarget {
     } else {
       let hsv = this.#color.get_hsva();
       this.thumb.style.left = `${hsv.s}%`;
-      this.thumb.style.bottom = `${hsv.v}%`;
+      this.thumb.style.top = `${100 - hsv.v}%`;
     }
     
     if (parse_out) {

@@ -115,6 +115,15 @@ let opt_lock = document.getElementById('opt-lock');
 let opt_theme_mode = document.querySelectorAll('input[name="opt-theme-mode"]');
 let opt_gen_mode = document.querySelectorAll('input[name="opt-gen-mode"]');
 
+btn_reload.addEventListener('click', ev => {
+  // browser.runtime.reload();
+  browser.browserAction.setIcon({
+    path: "/assets/icons/icon2.svg",
+  });
+  browser.sidebarAction.setIcon({
+    path: "/assets/icons/icon2.svg",
+  });
+});
 
 btn_surprise.addEventListener('click', ev => {
   browser.runtime.getBackgroundPage().then(win => {
@@ -154,7 +163,7 @@ panel_picker.addEventListener('colorchange', evt => {
   browser.runtime.getBackgroundPage().then(win => {
     let data_loaded = win.data.loaded;
     let scheme = data_loaded.get_selected();
-    scheme.panel = color.clone();
+    scheme.panel = color;
     
     scheme.update_secondary();
     text_picker.color = scheme.text;
@@ -186,6 +195,7 @@ text_picker.addEventListener('colorchange', evt => {
       text_picker.color = scheme.text;
     }
     panel_picker.color = scheme.panel;
+    
     scheme.apply();
     
     browser.runtime.sendMessage({
@@ -418,7 +428,7 @@ function update_ui(data, origin = 'bg', ignore = []) {
       // }
       
       let contrast_mode = card.querySelector('.contrast');
-      contrast_mode.innerHTML = scheme.text.contrast_ratio(scheme.panel).toFixed(2);
+      contrast_mode.innerHTML = scheme.panel.contrast_ratio(scheme.text).toFixed(2);
       contrast_mode.title = 'Contrast Ratio: ' + contrast_mode.innerText;
       
       let button_clone = card.querySelector('.actions .clone');
@@ -613,7 +623,7 @@ function set_theme_colors(theme) {
 }
 
 browser.theme.onUpdated.addListener((info) => {
-  // console.log('Theme updated', info);
+  console.log('Theme updated', info);
   if (info.theme.colors) {
     set_theme_colors(info.theme);
   }
