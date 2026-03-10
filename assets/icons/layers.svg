@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     id="QolarLayerStack"
+     viewBox="0 0 32 32">
+
+
+  <defs>
+    <style >
+      .cls-dynamic-primary {
+      fill: #f5446e;
+      }
+      .cls-fixed-background {
+      fill: #3a3a3d;
+      }
+      .cls-fixed-high-contrast {
+      fill: #fcfcfc;
+      }
+    </style>
+  </defs>
+
+  <rect class="cls-fixed-high-contrast" x="20.7" y="21.31" width="11.3" height="10.69" rx="1.56" ry="1.56"/>
+
+  <rect class="cls-fixed-background" x="11.08" y="10.15" width="20.92" height="16.59" rx="2.44" ry="2.44"/>
+
+  <rect class="cls-dynamic-primary" x="0" y="0" width="32" height="23.99" rx="3.5" ry="3.5"/>
+</svg>
