@@ -1,5 +1,6 @@
 @import "../css/fonts.css";
 @import "../css/theme.css";
+@import "../css/qpicker.css";
 
 body {
   max-width: 400px;

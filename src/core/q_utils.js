@@ -23,12 +23,11 @@ export function BYTES_TO_STRING(_bytes) {
 
 
 export class QCollection {
+  _selected = "";
   _options = {};
-  
   /** @type {QScheme[]} */
   _schemes = [];
   
-  _selected = "";
   
   get options() {
     return this._options;
@@ -59,10 +58,6 @@ export class QCollection {
     this._options = options;
     this._selected = "";
     this._schemes = [];
-    
-    this.onSelect = (scheme, id) => {
-      // scheme.apply();
-    };
     
   }
   
@@ -110,6 +105,10 @@ export class QCollection {
     return this._schemes.find(scheme => scheme.id === id) || false;
   }
   
+  find_index_by_id(id) {
+    return this._schemes.findIndex(scheme => scheme.id === id);
+  }
+  
   /**
    * Find Scheme in collection.
    * @param {QScheme} scheme
@@ -128,7 +127,6 @@ export class QCollection {
     let scheme = this.find_by_id(id);
     if (scheme !== false) {
       this._selected = id;
-      if (emit) this.onSelect(scheme, id);
     }
   }
   
@@ -152,7 +150,6 @@ export class QCollection {
   apply_selected(emit = true) {
     let scheme = this.get_selected();
     scheme.apply();
-    if (emit) this.onSelect(scheme, scheme.id);
   }
   
   
@@ -163,9 +160,18 @@ export class QCollection {
     return QCollection.unserialize(cur);
   }
   
-  
+  /**
+   * @param {QCollection} qcollection
+   * @returns {boolean}
+   */
   equals(qcollection) {
-    return (JSON.stringify(this) === JSON.stringify(qcollection));
+    if (JSON.stringify(qcollection.options) !== JSON.stringify(this.options)) return false;
+    if(qcollection.schemes.length !== this.schemes.length) return false;
+    for (let other of qcollection.schemes) {
+      if(!other.equals(this.find_by_id(other.id))) return false;
+    }
+    
+    return true;
   }
   
   
@@ -182,6 +188,7 @@ export class QCollection {
       for (let scheme of obj._schemes) {
         let _scheme = new QScheme();
         _scheme.parse(scheme);
+        _scheme.update_secondary();
         this.add(_scheme);
       }
     }

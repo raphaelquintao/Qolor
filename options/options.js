@@ -1,5 +1,5 @@
 import { QColor } from '../src/core/q_color.js';
-import { QPicker, QSlider } from '../src/core/q_picker.js';
+import { QPicker } from '../src/core/q_picker.js';
 import { QCollection, UUID } from "../src/core/q_utils.js";
 
 // -- SETUP ---
@@ -47,40 +47,41 @@ class UI {
 const prefs_container = document.querySelector('.prefs-container');
 const pickers_container = document.querySelector('#pickers-container');
 const scheme_selector = document.querySelector('#scheme-selector');
+const scheme_info = document.querySelector('.scheme-section .info');
 const scheme_container = document.querySelector('#scheme-selector .scheme-container');
 const header_actions = document.querySelector('#main-header .actions');
 const header_title = document.querySelector('#main-header .main-title');
+const header_logo = document.querySelector('#main-header .main-logo');
+const output_selector = document.querySelector('#output-selector');
 
-header_title.innerText = browser.runtime.getManifest().short_name;
+header_title.innerText = browser.runtime.getManifest().short_name.slice(1);
 document.title = browser.runtime.getManifest().short_name + `- ${VIEW.charAt(0).toUpperCase() + VIEW.slice(1)}`;
 
 // -- Create Options Checkboxes
 const options = {
-  sync_selected:             UI.create_checkbox('Sync Selected Scheme Across Browser'),
-  show_output:               UI.create_checkbox('Show Output'),
-  show_output_mode_selector: UI.create_checkbox('Show Output Mode Selector'),
-  show_slider_value:         UI.create_checkbox('Show Slider Value Label'),
-  alpha:                     UI.create_checkbox('Enable Transparency <em><small>(not recommended)</small></em>'),
+  show_output:       UI.create_checkbox('Show Output/Input', false, {className: 'checkbox-switch'}),
+  show_slider_value: UI.create_checkbox('Show Slider Value', false, {className: 'checkbox-switch'}),
+  show_slider_label: UI.create_checkbox('Show Slider Label', false, {className: 'checkbox-switch'}),
+  
 };
 for (let key in options) prefs_container.append(options[key].parentElement);
 
-const contrast_slider = new QSlider({
-  label: 'Minimum Contrast',
-  min: 1,
-  max: 21,
-  step: 0.1,
-  value: 5,
-  classes: []
-});
-contrast_slider.append_to(prefs_container);
-contrast_slider.addEventListener('input', ev => {
-  let value = parseFloat(contrast_slider.value);
-  browser.runtime.getBackgroundPage().then(win => {
-    let data_loaded = win.data.loaded;
-    data_loaded.options.min_contrast = value;
-    browser.runtime.sendMessage({key: 'update_scheme_color', origin: MY_ID});
-  });
-});
+output_selector.dataset.name = `qp-output-mode-${crypto.randomUUID()}`;
+
+for (let mode of QPicker.OUTPUT_MODES) {
+  let radio = document.createElement('input');
+  radio.type = 'radio';
+  radio.name = output_selector.dataset.name;
+  radio.value = mode;
+  radio.classList.add('btn');
+  radio.checked = false;
+  let label = document.createElement('label');
+  label.innerText = mode.toUpperCase();
+  label.prepend(radio);
+  output_selector.append(label);
+  // this.out_modes.push(radio);
+}
+
 
 // -- Create Header Action Buttons
 const btn_open_sidebar = UI.create_button('<i class="fa-solid fa-right-to-bracket fa-flip-horizontal"></i>', {title: 'Toggle Sidebar'});
@@ -88,9 +89,9 @@ const btn_open_popout = UI.create_button('<i class="fa-solid fa-up-right-from-sq
 if (VIEW === 'popout') {
   // header_actions.append(btn_open_sidebar);
 } else if (VIEW === 'sidebar') {
-  header_actions.append(btn_open_popout);
+  header_actions.prepend(btn_open_popout);
 } else {
-  header_actions.append(btn_open_sidebar, btn_open_popout);
+  header_actions.prepend(btn_open_sidebar, btn_open_popout);
 }
 btn_open_popout.addEventListener('click', ev => {
   ev.preventDefault();
@@ -111,19 +112,26 @@ let btn_sync = document.getElementById('btn-sync');
 
 let btn_new = document.getElementById('btn-new');
 
+let opt_color_wheel = document.getElementById('opt-color-wheel');
 let opt_lock = document.getElementById('opt-lock');
 let opt_theme_mode = document.querySelectorAll('input[name="opt-theme-mode"]');
 let opt_gen_mode = document.querySelectorAll('input[name="opt-gen-mode"]');
+let opt_output_mode = document.querySelectorAll(`input[name="${output_selector.dataset.name}"]`);
+
+
+
+btn_new.addEventListener('click', ev => {
+  browser.runtime.sendMessage({key: 'new_scheme', origin: MY_ID});
+});
+
+btn_sync.addEventListener('click', ev => {
+  browser.runtime.sendMessage({key: 'sync', origin: MY_ID});
+});
 
 btn_reload.addEventListener('click', ev => {
-  // browser.runtime.reload();
-  browser.browserAction.setIcon({
-    path: "/assets/icons/icon2.svg",
-  });
-  browser.sidebarAction.setIcon({
-    path: "/assets/icons/icon2.svg",
-  });
+  browser.runtime.reload();
 });
+
 
 btn_surprise.addEventListener('click', ev => {
   browser.runtime.getBackgroundPage().then(win => {
@@ -131,6 +139,8 @@ btn_surprise.addEventListener('click', ev => {
     let scheme = data_loaded.get_selected();
     
     scheme.randomize();
+    scheme.update_secondary();
+    
     
     scheme.apply();
     
@@ -147,10 +157,12 @@ btn_surprise.addEventListener('click', ev => {
 
 // -- Create Pickers
 const panel_picker = new QPicker({
-  label: ''
+  label:                     '',
+  show_output_mode_selector: false,
 });
 const text_picker = new QPicker({
-  label: ''
+  label:                     '',
+  show_output_mode_selector: false,
 });
 panel_picker.append_to(pickers_container);
 text_picker.append_to(pickers_container);
@@ -166,11 +178,7 @@ panel_picker.addEventListener('colorchange', evt => {
     scheme.panel = color;
     
     scheme.update_secondary();
-    text_picker.color = scheme.text;
-    if(!scheme.panel.equals(color)) {
-      panel_picker.color = scheme.panel;
-    }
-
+    
     scheme.apply();
     
     browser.runtime.sendMessage({
@@ -190,11 +198,8 @@ text_picker.addEventListener('colorchange', evt => {
   browser.runtime.getBackgroundPage().then(win => {
     let data_loaded = win.data.loaded;
     let scheme = data_loaded.get_selected();
+    scheme.text = color;
     scheme.update_secondary();
-    if(!scheme.text.equals(color)) {
-      text_picker.color = scheme.text;
-    }
-    panel_picker.color = scheme.panel;
     
     scheme.apply();
     
@@ -206,33 +211,11 @@ text_picker.addEventListener('colorchange', evt => {
   });
 });
 
-// -- UI Events
-function update_overlays(ele = null) {
-  if (!ele) {
-    let tmp = document.getElementsByClassName('scheme-selector');
-    for (let ele of tmp) {
-      update_overlays(ele);
-    }
-    return;
-  }
-  
-  let ol = ele.querySelector('.overlay.left');
-  let or = ele.querySelector('.overlay.right');
-  // if(!ol || !or) return;
-  
-  if (ele.scrollLeft > 0) {
-    ol.classList.add('active');
-  } else {
-    ol.classList.remove('active');
-  }
-  
-  if (ele.scrollLeft + ele.clientWidth < ele.scrollWidth) {
-    or.classList.add('active');
-  } else {
-    or.classList.remove('active');
-  }
-}
 
+
+
+
+// -- UI Events
 function bind_ui_events() {
   let collapsable = document.querySelectorAll('[data-collapsed]');
   for (let ele of collapsable) {
@@ -249,9 +232,7 @@ function bind_ui_events() {
     });
     
   }, {passive: false});
-  scheme_selector.addEventListener('scroll', ev => {
-    update_overlays(scheme_selector);
-  });
+  
   
   // Simple tooltip.
   document.addEventListener('mouseover', ev => {
@@ -304,41 +285,69 @@ function create_scheme_card(scheme, selected = false) {
   scheme_card.style.setProperty('--bg', scheme.panel.toString());
   scheme_card.style.setProperty('--fg', scheme.text.toString());
   
-  let actions = document.createElement('span');
-  actions.className = 'actions';
-  scheme_card.append(actions);
+  let card_inner = document.createElement('div');
+  card_inner.className = 'card-inner';
+  scheme_card.append(card_inner);
   
-  let button_clone = document.createElement('button');
-  button_clone.className = 'btn-icon clone';
-  actions.append(button_clone);
   
-  let button_delete = document.createElement('button');
-  button_delete.className = 'btn-icon delete';
-  actions.append(button_delete);
+  let card_front = document.createElement('div');
+  card_front.className = 'card-front';
+  let card_back = document.createElement('div');
+  card_back.className = 'card-back';
   
-  const default_indicator = document.createElement('button');
-  default_indicator.className = 'btn-icon default';
-  actions.append(default_indicator);
+  card_inner.append(card_front, card_back);
   
   let modes = document.createElement('span');
   modes.className = 'modes';
-  scheme_card.append(modes);
+  card_front.append(modes);
   
   let gen_mode = document.createElement('span');
   gen_mode.className = 'mode gen-mode';
   modes.append(gen_mode);
   
-  // let theme_mode = document.createElement('span');
-  // theme_mode.className = 'mode theme-mode';
-  // modes.append(theme_mode);
-  //
-  // let page_mode = document.createElement('span');
-  // page_mode.className = 'mode page-mode';
-  // modes.append(page_mode);
   
-  let contrast_mode = document.createElement('span');
-  contrast_mode.className = 'contrast';
-  scheme_card.append(contrast_mode);
+  let actions_left = document.createElement('span');
+  actions_left.className = 'actions left';
+  card_front.append(actions_left);
+  
+  let actions_right = document.createElement('span');
+  actions_right.className = 'actions';
+  card_front.append(actions_right);
+  
+  
+  let button_sync = document.createElement('button');
+  button_sync.className = 'btn-icon sync';
+  actions_left.append(button_sync);
+  
+  
+  const default_indicator = document.createElement('button');
+  default_indicator.className = 'btn-icon default';
+  actions_right.append(default_indicator);
+  
+  let button_delete = document.createElement('button');
+  button_delete.className = 'btn-icon delete';
+  actions_right.append(button_delete);
+  
+  let button_clone = document.createElement('button');
+  button_clone.className = 'btn-icon clone';
+  actions_right.append(button_clone);
+  
+  // let button_flip = document.createElement('button');
+  // button_flip.className = 'btn-icon flip';
+  // button_flip.innerHTML = '<i class="fa-solid fa-right-left"></i>';
+  // actions_right.append(button_flip);
+  //
+  // button_flip.addEventListener('click', ev => {
+  //   ev.preventDefault();
+  //   ev.stopPropagation();
+  //   scheme_card.classList.toggle('flip');
+  // });
+  
+  button_sync.addEventListener('click', ev => {
+    ev.stopPropagation();
+    if (button_sync.style.cursor !== 'pointer') return;
+    browser.runtime.sendMessage({key: 'restore_scheme', id: scheme.id, origin: MY_ID});
+  });
   
   
   button_clone.addEventListener('click', ev => {
@@ -355,7 +364,8 @@ function create_scheme_card(scheme, selected = false) {
     }
   });
   
-  scheme_card.addEventListener('click', ev => {
+  card_front.addEventListener('click', ev => {
+    if (scheme_card.dataset.selected === 'true') return;
     browser.runtime.sendMessage({key: 'set_scheme', id: scheme.id, origin: MY_ID});
   });
   
@@ -364,7 +374,7 @@ function create_scheme_card(scheme, selected = false) {
 }
 
 
-/** @param {QCollection} data
+/** @param {{synced: QCollection, loaded: QCollection}} data
  * @param {string} origin
  * @param {string[]} ignore
  */
@@ -372,15 +382,22 @@ function update_ui(data, origin = 'bg', ignore = []) {
   const is_origin = (origin === MY_ID);
   console.log('Updating UI', {origin, ignore, is_origin});
   
-  const loaded = data;
+  const loaded = data.loaded;
   
   const selected_scheme = loaded.get_selected();
   
-  options.show_output.checked = loaded.options.show_output;
-  options.show_output_mode_selector.checked = loaded.options.show_output_mode_selector;
-  options.show_slider_value.checked = loaded.options.show_slider_value;
-  options.sync_selected.checked = loaded.options.sync_selected;
-  options.alpha.checked = loaded.options.alpha;
+  if (data.loaded.equals(data.synced)) {
+    btn_sync.disabled = true;
+  } else {
+    btn_sync.disabled = false;
+  }
+  
+  
+  for (let key in options) {
+    options[key].checked = loaded.options[key];
+  }
+  
+  scheme_info.innerHTML = `<small>(${loaded._schemes.length})</small>`;
   
   let scheme_cards = scheme_container.querySelectorAll('.scheme-card');
   if (scheme_cards.length !== loaded.schemes.length) {
@@ -393,47 +410,78 @@ function update_ui(data, origin = 'bg', ignore = []) {
     }
   }
   scheme_cards = scheme_container.querySelectorAll('.scheme-card');
+  
+  
   for (let card of scheme_cards) {
     let scheme = loaded.find_by_id(card.id);
     if (scheme) {
-      card.style.setProperty('--bg', scheme.panel.toString());
-      card.style.setProperty('--fg', scheme.text.toString());
-      card.style.setProperty('--theme-mode', scheme.theme_mode);
+      if (!scheme.cached || scheme.cached.length < 4) {
+        scheme.update_secondary();
+      }
+      
+      card.style.setProperty('--bg', scheme.cached[0].to_string());
+      card.style.setProperty('--fg', scheme.cached[1].to_string());
       
       let gen_mode = card.querySelector('.modes .gen-mode');
       gen_mode.dataset.title = 'Generation Mode:';
-      gen_mode.innerHTML = '';
-      if (scheme.gen_mode === 'dual') {
-        gen_mode.innerHTML = '<i class="fas fa-palette"></i>';
-        gen_mode.dataset.title += ' Dual Tone';
-      } else if (scheme.gen_mode === 'colorful') {
-        gen_mode.innerHTML = '<i class="fas fa-swatchbook"></i>';
-        gen_mode.dataset.title += ' Colorful';
-      } else {
-        gen_mode.innerHTML = '<i class="fas fa-fill"></i>';
+      
+      let qsvg = gen_mode.querySelector('q-svg');
+      if (!qsvg) {
+        qsvg = document.createElement('q-svg');
+        gen_mode.append(qsvg);
+      }
+      qsvg.style.setProperty('--primary', scheme.cached[1].to_string());
+      qsvg.style.setProperty('--secondary', scheme.cached[4].to_string());
+      qsvg.style.setProperty('--tertiary', scheme.cached[5].to_string());
+      qsvg.setAttribute('width', '2.5em');
+      qsvg.setAttribute('height', '2.5em');
+      
+      if (scheme.gen_mode === 'normal') {
         gen_mode.dataset.title += ' Single Tone';
+        qsvg.setAttribute('src', '../assets/icons/droplet.svg');
+      } else if (scheme.gen_mode === 'colorful') {
+        gen_mode.dataset.title += ' Colorful';
+        qsvg.setAttribute('src', '../assets/icons/triadic.svg');
+      } else if (scheme.gen_mode === 'dual') {
+        gen_mode.dataset.title += ' Dual Tone';
+        qsvg.setAttribute('src', '../assets/icons/dual.svg');
       }
       
-      // let theme_mode = card.querySelector('.modes .theme-mode');
-      // theme_mode.title = 'Theme Mode: ' + scheme.theme_mode;
-      // theme_mode.innerHTML = scheme.theme_mode === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-      //
-      // let page_mode = card.querySelector('.modes .page-mode');
-      // page_mode.title = 'Page Mode: ' + scheme.page_mode;
-      // page_mode.innerHTML = scheme.page_mode === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-      // if (scheme.theme_mode === scheme.page_mode) {
-      //   page_mode.style.display = 'none';
-      // } else {
-      //   page_mode.style.display = '';
-      // }
+      let sync = card.querySelector('.actions .sync');
+      sync.classList.add('always-visible');
+      sync.style.cursor = 'default';
       
-      let contrast_mode = card.querySelector('.contrast');
-      contrast_mode.innerHTML = scheme.panel.contrast_ratio(scheme.text).toFixed(2);
-      contrast_mode.title = 'Contrast Ratio: ' + contrast_mode.innerText;
+      let synced = data.synced;
+      
+      let found = synced.find_by_id(scheme.id);
+      
+      if (found && scheme.equals(found)) {
+        sync.dataset.title = 'Scheme is Synced Across Devices';
+        sync.innerHTML = ' <i class="fa-solid fa-cloud"></i>';
+      } else if (found) {
+        sync.dataset.title = 'Scheme is Different from Synced (Click to Restore)';
+        sync.innerHTML = '<i class="fa-solid fa-download"></i>';
+        sync.style.cursor = 'pointer';
+      } else {
+        sync.dataset.title = 'Local Scheme';
+        sync.innerHTML = ' <i class="fa-regular fa-cloud"></i>';
+      }
+      
+      
+      
+      let actions = card.querySelector('.actions');
+      
+      let modes = card.querySelector('.modes');
+      modes.style.color = scheme.cached[4].to_string();
+      
+      
+      
+      
       
       let button_clone = card.querySelector('.actions .clone');
       button_clone.title = 'Clone Scheme';
       button_clone.innerHTML = '<i class="fa-solid fa-clone"></i>';
+      // button_clone.style.color = scheme.cached[1].to_string();
       
       let button_delete = card.querySelector('.actions .delete');
       if (scheme.locked) {
@@ -493,15 +541,20 @@ function update_ui(data, origin = 'bg', ignore = []) {
     }
   }
   
+  text_picker.picker_mode = panel_picker.picker_mode = loaded.options.color_wheel ? 'hsl' : 'hsv';
   text_picker.show_output = panel_picker.show_output = loaded.options.show_output;
-  text_picker.show_output_mode_selector = panel_picker.show_output_mode_selector = loaded.options.show_output_mode_selector;
   text_picker.show_slider_value = panel_picker.show_slider_value = loaded.options.show_slider_value;
-  text_picker.alpha_enabled = panel_picker.alpha_enabled = loaded.options.alpha;
+  text_picker.show_slider_label = panel_picker.show_slider_label = loaded.options.show_slider_label;
   
   panel_picker.disabled = text_picker.disabled = !selected_scheme.editable;
   btn_surprise.disabled = !selected_scheme.editable;
   opt_lock.disabled = selected_scheme.default;
   opt_lock.checked = selected_scheme.locked || selected_scheme.default;
+  opt_lock.parentElement.querySelector('i').className = opt_lock.checked ? 'fa-solid fa-lock' : 'fa-solid fa-lock-open';
+  
+  
+  opt_color_wheel.checked = loaded.options.color_wheel;
+  
   
   opt_theme_mode.forEach(radio => {
     radio.checked = (radio.value === selected_scheme.theme_mode);
@@ -513,6 +566,13 @@ function update_ui(data, origin = 'bg', ignore = []) {
     radio.disabled = !selected_scheme.editable;
   });
   
+  if (!loaded.options?.output_mode) loaded.options.output_mode = 'hsl';
+  opt_output_mode.forEach(radio => {
+    radio.checked = (radio.value === loaded.options.output_mode);
+  });
+  text_picker.output_mode = loaded.options.output_mode;
+  panel_picker.output_mode = loaded.options.output_mode;
+  
   if (selected_scheme.gen_mode === 'dual') {
     text_picker.container.style.display = '';
   } else {
@@ -521,66 +581,6 @@ function update_ui(data, origin = 'bg', ignore = []) {
   
 }
 
-// -- Initialize UI
-const bg = browser.runtime.getBackgroundPage();
-bg.then(win => {
-  console.log('curr_id', MY_ID, win);
-  
-  /**@type {QCollection} */
-  let data_loaded = win.get_data_loaded();
-  
-  options.show_output.checked = data_loaded.options.show_output;
-  options.show_output_mode_selector.checked = data_loaded.options.show_output_mode_selector;
-  options.show_slider_value.checked = data_loaded.options.show_slider_value;
-  options.sync_selected.checked = data_loaded.options.sync_selected;
-  options.alpha.checked = data_loaded.options.alpha;
-  
-  panel_picker.show_output = text_picker.show_output = data_loaded.options.show_output;
-  panel_picker.show_output_mode_selector = text_picker.show_output_mode_selector = data_loaded.options.show_output_mode_selector;
-  panel_picker.show_slider_value = text_picker.show_slider_value = data_loaded.options.show_slider_value;
-  panel_picker.alpha_enabled = text_picker.alpha_enabled = data_loaded.options.alpha;
-  
-  
-  for (let key in options) {
-    options[key].addEventListener('change', ev => {
-      data_loaded.options[key] = options[key].checked;
-      browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
-    });
-  }
-  
-  
-  opt_lock.addEventListener('change', ev => {
-    data_loaded.get_selected().locked = opt_lock.checked;
-    browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
-  });
-  
-  opt_theme_mode.forEach(radio => {
-    radio.addEventListener('change', ev => {
-      if (radio.checked) {
-        data_loaded.get_selected().theme_mode = radio.value;
-        data_loaded.get_selected().page_mode = radio.value;
-        data_loaded.get_selected().apply();
-        browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
-      }
-    });
-  });
-  
-  opt_gen_mode.forEach(radio => {
-    radio.addEventListener('change', ev => {
-      if (radio.checked) {
-        data_loaded.get_selected().gen_mode = radio.value;
-        data_loaded.get_selected().update_secondary();
-        data_loaded.get_selected().apply();
-        browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
-      }
-    });
-  });
-  
-  
-  update_ui(data_loaded, MY_ID);
-  
-  update_overlays(scheme_selector);
-});
 
 browser.runtime.onMessage.addListener((message, sender, send_response) => {
   if (!message['to'] || message['to'] !== 'front') return;
@@ -590,9 +590,9 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
   if (message.key === 'refresh') {
     const bg = browser.runtime.getBackgroundPage();
     bg.then(win => {
-      let data_loaded = win.get_data_loaded();
+      let data = win.get_data();
       try {
-        update_ui(data_loaded, message.origin, message.ignore);
+        update_ui(data, message.origin, message.ignore);
       } catch (err) {
         console.error('Failed to update UI', err, data_loaded);
       }
@@ -603,20 +603,19 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
 
 
 
-
 function set_theme_colors(theme) {
   if (theme.colors) {
     const url = new URL(window.location.href);
     const view = url.searchParams.get('view');
     console.info('View param:', view);
     if (view === 'sidebar') {
-      document.body.parentElement.style.setProperty('--q-base', theme.colors.sidebar);
+      // document.body.parentElement.style.setProperty('--q-base', theme.colors.sidebar);
       // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.sidebar_text);
     } else if (view === 'popup') {
       document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
-      // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
+      document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
     } else {
-      document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
+      // document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
       // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
     }
   }
@@ -637,6 +636,131 @@ browser.theme.getCurrent().then(theme => {
 
 
 
+// -- Initialize UI
+const bg = browser.runtime.getBackgroundPage();
+bg.then(win => {
+  console.log('curr_id', MY_ID, win);
+  
+  let data = win.get_data();
+  let data_loaded = data.loaded;
+  
+  
+  text_picker.picker_mode = panel_picker.picker_mode = data_loaded.options.color_wheel ? 'hsl' : 'hsv';
+  panel_picker.show_output = text_picker.show_output = data_loaded.options.show_output;
+  panel_picker.show_slider_value = text_picker.show_slider_value = data_loaded.options.show_slider_value;
+  panel_picker.show_slider_label = text_picker.show_slider_label = !!data_loaded.options.show_slider_label;
+  
+  panel_picker.output_mode = text_picker.output_mode = data_loaded.options.output_mode || 'hsl';
+  
+  // opt_color_wheel.checked = data_loaded.options.color_wheel === 'hsl';
+  
+  opt_color_wheel.addEventListener('change', (e) => {
+    data_loaded.options.color_wheel = opt_color_wheel.checked;
+    
+    browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
+  });
+  
+  for (let key in options) {
+    options[key].addEventListener('change', ev => {
+      data_loaded.options[key] = options[key].checked;
+      browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
+    });
+  }
+  
+  
+  opt_lock.addEventListener('change', ev => {
+    data_loaded.get_selected().locked = opt_lock.checked;
+    browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
+  });
+  
+  opt_theme_mode.forEach(radio => {
+    radio.addEventListener('change', ev => {
+      if (radio.checked) {
+        data_loaded.get_selected().theme_mode = radio.value;
+        data_loaded.get_selected().page_mode = radio.value;
+        data_loaded.get_selected().update_secondary();
+        data_loaded.get_selected().apply();
+        browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
+      }
+    });
+  });
+  
+  opt_gen_mode.forEach(radio => {
+    radio.addEventListener('change', ev => {
+      if (radio.checked) {
+        data_loaded.get_selected().gen_mode = radio.value;
+        data_loaded.get_selected().update_secondary();
+        data_loaded.get_selected().apply();
+        browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
+      }
+    });
+  });
+  
+  opt_output_mode.forEach(radio => {
+    radio.addEventListener('change', ev => {
+      if (radio.checked) {
+        data_loaded.options.output_mode = radio.value;
+        browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
+      }
+    });
+  });
+  
+  
+  update_ui(data, MY_ID);
+  
+  
+});
+
+
+
+
+
+class QSVG extends HTMLElement {
+  
+  static CACHE = {};
+  
+  static get observedAttributes() {
+    return ['src'];
+  }
+  
+  attributeChangedCallback(name, old_value, new_value) {
+    if (name === 'src' && old_value !== new_value) {
+      this.load_svg(new_value);
+    }
+  }
+  
+  async load_svg(src) {
+    if (!src) return;
+    if (!this.shadowRoot) this.attachShadow({mode: 'open'});
+    
+    if (QSVG.CACHE[src]) {
+      this.shadowRoot.innerHTML = QSVG.CACHE[src];
+    } else {
+      const svg_text = await (await fetch(src)).text();
+      this.shadowRoot.innerHTML = svg_text;
+      QSVG.CACHE[src] = svg_text;
+    }
+    
+    
+    const w = this.getAttribute('width');
+    const h = this.getAttribute('height');
+    
+    const svg = this.shadowRoot.querySelector('svg');
+    if (svg) {
+      if (w) svg.setAttribute('width', w);
+      if (h) svg.setAttribute('height', h);
+      svg.style.display = 'block';
+    }
+  }
+  
+  connectedCallback() {
+    const src = this.getAttribute('src');
+    this.load_svg(src);
+  }
+  
+}
+
+customElements.define('q-svg', QSVG);
 
 
 

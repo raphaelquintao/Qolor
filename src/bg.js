@@ -1,46 +1,42 @@
-import { QColor } from './core/q_color.js';
 import { QScheme } from './core/q_scheme.js';
 import { BYTES_TO_STRING, QCollection } from "./core/q_utils.js";
 
 
 // -- RUNTIME SETUP
+const STKEY = 'qcolor';
 
 let data = {};
 // q.saved = new QCollection();
-// q.synced = new QCollection();
+data.synced = new QCollection();
 data.loaded = new QCollection({
+  color_wheel:               true,
   show_output:               true,
+  output_mode:               'hsl',
   show_output_mode_selector: true,
   show_slider_value:         false,
-  sync_selected:             true,
-  alpha:                     false,
-  min_contrast:              5
+  show_slider_label:         false,
 });
 window.data = data;
 
-window.get_data_loaded = () => {
-  return data.loaded;
+/**
+ * @returns {{synced: QCollection, loaded: QCollection}}
+ */
+window.get_data = () => {
+  return data;
 };
 
 
-// q.colors.onSelect = scheme => {
-//   scheme.apply();
-//
-//   // let title = `Photophobia - ${scheme.name}`;
-//   // browser.browserAction.setTitle({title: title});
-//
-//   // browser.browserAction.setBadgeText({text: scheme.name});
-//
-//   // browser.browserAction.setBadgeBackgroundColor({color: scheme.getTextPreviewColor()});
-// };
+
 
 let gray = new QScheme('• Gray', '_default');
 gray.gen_mode = 'dual';
+gray.update_secondary();
 
 let gray2 = new QScheme('Gray 2', 'gray2');
 gray2.gen_mode = 'dual';
 gray2.panel.hsla = {h: 220, s: 5, l: 25};
 gray2.text.hsla = {h: 214, s: 2, l: 90};
+gray2.update_secondary();
 
 let dark_pink = new QScheme('Dark Pink', 'qdpink');
 dark_pink.gen_mode = 'normal';
@@ -74,29 +70,26 @@ broken.update_secondary();
 
 
 data.loaded.add(gray, false);
-data.loaded.add(gray2, false);
+data.loaded.add(gray2, true);
 data.loaded.add(dark_pink, false);
 data.loaded.add(light_pink, false);
 data.loaded.add(light_pink2, false);
 data.loaded.add(purple, false);
 data.loaded.add(red, false);
 
-data.loaded.add(new QScheme().update_secondary(), false);
-data.loaded.add(new QScheme().update_secondary(), false);
-data.loaded.add(new QScheme().update_secondary(), false);
-data.loaded.add(broken, false);
-data.loaded.add(new QScheme().update_secondary(), true);
-data.loaded.add(new QScheme().update_secondary(), false);
+// data.loaded.add(new QScheme().update_secondary(), false);
+// data.loaded.add(new QScheme().update_secondary(), false);
+// data.loaded.add(new QScheme().update_secondary(), false);
+// data.loaded.add(broken, false);
+// data.loaded.add(new QScheme().update_secondary(), true);
+// data.loaded.add(new QScheme().update_secondary(), false);
 
-let serialized = data.loaded.serialize();
-let temp = QCollection.unserialize(serialized);
-console.log('Initial schemes', data.loaded);
-console.log('Initial schemes', temp);
 
 
 // -- UI Funcs
 function ui_refresh(origin = 'bg', ignore = []) {
   browser.runtime.sendMessage({key: 'refresh', origin: origin, ignore: ignore, to: 'front'});
+  save();
 }
 
 
@@ -104,30 +97,90 @@ function ui_refresh(origin = 'bg', ignore = []) {
 /** @type {browser.windows.Window|null} */
 let popout = null;
 
-function open_popout() {
+async function open_popout(debug = false) {
   if (popout !== null) {
     browser.windows.update(popout.id, {focused: true});
     return;
   }
-  browser.windows.getLastFocused().then(last => {
-    // console.info('Last Focused Window', last);
-    browser.windows.create({
-      url:                 browser.runtime.getURL('options/options.html?view=popout'),
-      type:                'popup',
-      focused:             true,
-      allowScriptsToClose: true,
-      top:                 last.top + 120,
-      left:                last.left + last.width - 420,
-      width:               400,
-      height:              600
-    }).then(win => {
-      popout = win;
-    }, reason => {
-      console.error('Failed to create Popout', reason);
-    });
-    
+  
+  const margin = {top: 120, left: 20};
+  let position = {
+    width:  400,
+    height: 600,
+    top:    margin.top,
+    left:   margin.left,
+  };
+  position.left -= position.width;
+  
+  let saved = await browser.storage.local.get('popout_position').then(value => {
+    return value?.popout_position || undefined;
   });
-};
+  if (saved) {
+    position = saved;
+  } else {
+    await browser.windows.getLastFocused().then(last => {
+      position.top += last.top;
+      position.left += last.left + last.width;
+    });
+  }
+  
+  
+  
+  browser.windows.create({
+    url:                 browser.runtime.getURL('options/options.html?view=popout'),
+    type:                'popup',
+    focused:             true,
+    allowScriptsToClose: true,
+    top:                 position.top,
+    left:                position.left,
+    width:               position.width,
+    height:              position.height,
+  }).then(win => {
+    popout = win;
+  }, reason => {
+    console.error('Failed to create Popout', reason);
+  });
+  
+  
+}
+
+browser.windows.onRemoved.addListener(window_id => {
+  console.info('Window Removed', window_id);
+  
+  if (popout !== null && window_id === popout.id) {
+    popout = null;
+  }
+});
+
+browser.windows.onFocusChanged.addListener(window_id => {
+  // console.info('Window Focus Changed', window_id);
+  
+  if (popout !== null) {
+    browser.windows.get(popout.id).then(win => {
+      const position = {
+        top:    win.top,
+        left:   win.left,
+        width:  win.width,
+        height: win.height,
+      };
+      
+      browser.storage.local.get('popout_position').then(value => {
+        const last = value?.popout_position || undefined;
+        if (!last || JSON.stringify(last) !== JSON.stringify(position)) {
+          browser.storage.local.set({'popout_position': position}).then(() => {}, reason => {
+            console.error('Failed to save Popout position to local storage', reason);
+          });
+        }
+      });
+      
+      
+    }, reason => {
+      console.error('Failed to get removed window', reason);
+    });
+  }
+});
+
+
 
 // -- Messages
 browser.runtime.onMessage.addListener((message, sender, send_response) => {
@@ -142,14 +195,14 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
     });
   }
   
-  if(message.key === 'set_data') {
+  if (message.key === 'set_data') {
     data.loaded = QCollection.unserialize(message.loaded);
     data.loaded.apply_selected();
     ui_refresh(message.origin, []);
     return;
   }
   
-  if(message.key === 'get_options') {
+  if (message.key === 'get_options') {
     return Promise.resolve({
       options: data.loaded.options
     });
@@ -190,45 +243,62 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
     ui_refresh(message.origin, []);
   }
   
+  if (message.key === 'restore_scheme') {
+    // let current_index = data.loaded.find_index_by_id(message.id);
+    let synced = data.synced.find_by_id(message.id);
+    // let current = data.loaded.schemes[current_index];
+    let current = data.loaded.find_by_id(message.id);
+    
+    current.parse(synced);
+    current.update_secondary();
+    current.apply();
+    
+    
+    ui_refresh(message.origin, []);
+  }
+  
+  if (message.key === 'new_scheme') {
+    let clone = new QScheme();
+    clone.update_secondary();
+    data.loaded.add(clone, true);
+    clone.apply();
+    
+    ui_refresh(message.origin, []);
+  }
+  
   
   if (message.key === 'open_popout') {
-    if (popout !== null) {
-      browser.windows.update(popout.id, {focused: true});
-      return;
-    }
-    browser.windows.getLastFocused().then(last => {
-      // console.info('Last Focused Window', last);
-      browser.windows.create({
-        url:                 browser.runtime.getURL('options/options.html?view=popout'),
-        type:                'popup',
-        focused:             true,
-        allowScriptsToClose: true,
-        top:                 last.top + 120,
-        left:                last.left + last.width - 420,
-        width:               400,
-        height:              600
-      }).then(win => {
-        popout = win;
-      }, reason => {
-        console.error('Failed to create Popout', reason);
-      });
-      
-    });
-    
+    open_popout();
+  }
+  
+  if (message.key === 'save') {
+    save();
+  }
+  
+  if (message.key === 'sync') {
+    sync_to_storage();
   }
   
 });
 
-browser.windows.onRemoved.addListener(window_id => {
-  console.info('Window Removed', window_id);
-  
-  if (popout !== null && window_id === popout.id) {
-    popout = null;
-  }
-});
+
 
 browser.runtime.onInstalled.addListener(details => {
   console.info('Installed', details);
+  
+  
+  // browser.storage.sync.get(STKEY).then(value => {
+  //   console.info('Initial data from sync storage', value);
+  // }, reason => {
+  //   console.error('Failed to get initial data from sync storage', reason);
+  // })
+  
+  // browser.storage.sync.set({[STKEY]: data.loaded.serialize()}).then(() => {
+  //   console.info('Initial data saved to sync storage');
+  // }, reason => {
+  //   console.error('Failed to save initial data to sync storage', reason);
+  // });
+  
 });
 
 
@@ -239,89 +309,108 @@ browser.storage.onChanged.addListener((changes, area) => {
   let changed_items = Object.keys(changes);
   
   for (let item of changed_items) {
-    console.info(item + " has changed:");
-    console.info("Old value: ", changes[item].oldValue);
-    console.info("New value: ", changes[item].newValue);
+    // console.info(item + " has changed:");
+    // console.info("Old value: ", changes[item].oldValue);
+    // console.info("New value: ", changes[item].newValue);
   }
 });
 
 
-const STKEY = 'qcolor';
 
-
-function lixo(changeInfo) {
-  console.info('Vertical Tabs changed:', changeInfo);
+function save() {
+  return new Promise((resolve, reject) => {
+    browser.storage.local.set({[STKEY]: data.loaded.serialize()}).then(() => {
+      console.info('Data saved to local storage');
+    }, reason => {
+      console.error('Failed to saved data to local storage', reason);
+      reject(reason);
+    });
+  });
 }
 
-browser.browserSettings.verticalTabs.onChange.addListener(lixo);
-
-browser.browserSettings.overrideContentColorScheme
-  .set({ value: "auto" })
-  .then(value => {
-    console.info(`Setting was modified: ${value}`);
+function sync_to_storage() {
+  return new Promise((resolve, reject) => {
+    browser.storage.sync.set({[STKEY]: data.loaded.serialize()}).then(() => {
+      console.info('Data synced to sync storage');
+      browser.storage.sync.getBytesInUse().then(value => {
+        console.log('GET SYNC', BYTES_TO_STRING(value));
+        window.usage.sync = value;
+        resolve();
+      });
+    }, reason => {
+      console.error('Failed to sync data to sync storage', reason);
+      reject(reason);
+    });
   });
+}
 
+window.usage = {
+  sync:  0,
+  local: 0
+};
 
+function sync_from_storage() {
+  return new Promise((resolve, reject) => {
+    browser.storage.sync.get(STKEY).then(value => {
+      if (value.hasOwnProperty(STKEY)) {
+        let tmp = value[STKEY];
+        data.synced = QCollection.unserialize(tmp);
+        
+        
+      } else {
+        console.info('No initial data in sync storage');
+        // browser.storage.local.set({[STKEY]: data.loaded.serialize()}).then(() => {
+        //   console.info('Initial data saved to sync storage');
+        //   data.loaded.apply_selected();
+        // }, reason => {
+        //   console.error('Failed to save initial data to sync storage', reason);
+        // });
+      }
+      console.info('Initial data from sync storage', value);
+      resolve();
+    }, reason => {
+      console.error('Failed to get initial data from sync storage', reason);
+      reject(reason);
+    });
+  });
+}
 
 
 // -- Main
 async function main() {
-  data.loaded.apply_selected();
+  // data.loaded.apply_selected();
   
-  let vertical_tabs = await browser.browserSettings.verticalTabs.get({incognito: true});
-  console.log('Vertical Tabs:', vertical_tabs);
-  
-  // browser.storage.sync.
-  
-  browser.storage.sync.getBytesInUse(STKEY).then(value => {
+  browser.storage.sync.getBytesInUse().then(value => {
     console.log('GET SYNC', BYTES_TO_STRING(value));
+    window.usage.sync = value;
   });
   
-  let c1 = new QColor('hsl(240, 15%, 50%)');
-  let c2 = new QColor('hsl(325, 50%, 30%)');
-  let bg = new QColor('hsl(240, 17%, 0%)');
-  console.log('rgb',
-    c1.blend(c2, 0.3, 'rgb').to_string(),
-    c2.blend(c1, 0.3, 'rgb').to_string()
-  );
-  console.log('hsl',
-    c1.blend(c2, 0.3).to_string(),
-    c2.blend(c1, 0.3).to_string()
-  );
-  const n = new QColor('#B5835A80');
-  console.log('contrast',
-    bg.contrast_ratio(n).toFixed(2)
-  );
+  browser.storage.local.getBytesInUse().then(value => {
+    console.log('GET LOCAL', BYTES_TO_STRING(value));
+  });
+  
+  browser.storage.local.get(STKEY).then(value => {
+    if (value.hasOwnProperty(STKEY)) {
+      let tmp = value[STKEY];
+      data.loaded = QCollection.unserialize(tmp);
+      data.loaded.apply_selected();
+      sync_from_storage();
+    } else {
+      console.info('No initial data in sync storage');
+      browser.storage.local.set({[STKEY]: data.loaded.serialize()}).then(() => {
+        console.info('Initial data saved to sync storage');
+        data.loaded.apply_selected();
+      }, reason => {
+        console.error('Failed to save initial data to sync storage', reason);
+      });
+    }
+    console.info('Initial data from sync storage', value);
+  }, reason => {
+    console.error('Failed to get initial data from sync storage', reason);
+  });
   
   
-  // QStorage.getLocal(STKEY)
-  //     .then(value => {
-  //         // console.log('GET LOCAL', value);
-  //         if (value.hasOwnProperty(STKEY)) {
-  //             let tmp = value[STKEY];
-  //             q.colors.clear();
-  //             // q.colors = new QCollection();
-  //             q.colors.parse(tmp);
-  //             // q.colors.getSelected().apply();
-  //             q.colors.applySelected();
-  //
-  //             q.saved = q.colors.clone();
-  //         } else {
-  //             HAS_LOCAL = false;
-  //         }
-  //     }, reason => {
-  //         // console.log('GET LOCAL - FAIL', reason);
-  //     });
   
-  // await get_synced();
-  
-  
-  // let info = browser.runtime.getBrowserInfo();
-  // info.then(value => {
-  //     console.log(value);
-  // });
-  
-  // debug();
 }
 
 main();

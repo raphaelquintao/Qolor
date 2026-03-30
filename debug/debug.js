@@ -1,5 +1,5 @@
 import { QColor } from '../src/core/q_color.js';
-import { QPicker } from "../src/core/qpicker.js";
+import { QPicker } from "../src/core/q_picker.js";
 
 
 const controls = document.getElementById('controls-container');

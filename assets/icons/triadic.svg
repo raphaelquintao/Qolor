@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 150 150"
+     width="250" height="250"
+>
+  <style>
+    .lixo {
+    --p1: var(--primary, red);
+    --p2: oklch(from var(--primary) calc(l - 0.15) c h);
+
+    --s1: var(--secondary, green);
+    --s2: oklch(from var(--secondary) calc(l - 0.15) c h);
+
+    --t1: var(--tertiary, blue);
+    --t2: oklch(from var(--tertiary) calc(l - 0.15) c h);
+    }
+  </style>
+
+  <defs>
+    <radialGradient id="lixo" class="lixo" cx="50%" cy="50%" r="100%">
+      <stop offset="0%" stop-color="var(--p1)" stop-opacity="1"/>
+      <stop offset="100%" stop-color="var(--p2)" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="lixo2" class="lixo" cx="50%" cy="50%" r="100%">
+      <stop offset="0%" stop-color="var(--s1)" stop-opacity="1"/>
+      <stop offset="100%" stop-color="var(--s2)" stop-opacity="1"/>
+    </radialGradient>
+
+    <radialGradient id="lixo3" class="lixo" cx="50%" cy="50%" r="100%">
+      <stop offset="0%" stop-color="var(--t1)" stop-opacity="1"/>
+      <stop offset="100%" stop-color="var(--t2)" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+
+    <g transform="translate(25,25)" stroke-width="10" stroke-linejoin="round">
+
+      <polygon points="50,0 75,50 50,65 25,50" transform="translate(0, -15)"
+               fill="url(#lixo)" stroke="url(#lixo)"/>
+
+      <polygon points="25,50 50,65 50,100 0,100" transform="translate(-16, 15)"
+               fill="url(#lixo2)" stroke="url(#lixo2)"/>
+
+      <polygon points="75,50 50,65 50,100 100,100" transform="translate(16, 15)"
+               fill="url(#lixo3)" stroke="url(#lixo3)"/>
+    </g>
+</svg>

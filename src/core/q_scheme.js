@@ -2,14 +2,14 @@ import { QColor } from './q_color.js';
 import { QRandomInt } from './q_utils.js';
 
 export class QScheme {
+  /** @type {QColor[]} */
+  cached = [];
   
   constructor(name = "", id = "") {
     this.id = (id === "") ? QScheme.unique_id() : id;
     this.name = (name === "") ? 'no_name_scheme' : name;
     
     this.locked = false;
-    this.saved = false;
-    this.synced = false;
     
     /** @type {'normal'|'colorful'|'dual'} */
     this.gen_mode = 'normal';
@@ -20,6 +20,7 @@ export class QScheme {
     this.panel = new QColor('hsl(220, 9%, 23%)');
     /** @type {QColor} */
     this.text = new QColor('hsl(214, 2%, 90%)');
+    
     
     
     return this;
@@ -39,8 +40,6 @@ export class QScheme {
     if (obj.id) this.id = obj.id;
     if (obj.name) this.name = obj.name;
     if (obj.locked) this.locked = obj.locked;
-    if (obj.saved) this.saved = obj.saved;
-    if (obj.synced) this.synced = obj.synced;
     if (obj.gen_mode) this.gen_mode = obj.gen_mode;
     if (obj.theme_mode) this.theme_mode = obj.theme_mode;
     if (obj.page_mode) this.page_mode = obj.page_mode;
@@ -62,71 +61,79 @@ export class QScheme {
     return this;
   }
   
-  update_secondary(min_contrast = 5.0) {
-    if (data.loaded.options.min_contrast) min_contrast = data.loaded.options.min_contrast;
+  update_secondary(min_contrast = 5) {
+    // if (data.loaded.options.min_contrast) min_contrast = data.loaded.options.min_contrast;
+    this.cached = [
+      this.panel.clone(),
+      this.text.clone(),
+    ];
+    
+    const black = new QColor('hsl(0, 0%, 0%)');
+    const white = new QColor('hsl(0, 0%, 100%)');
+    
+    if (this.theme_mode === 'dark') {
+      this.cached[0] = this.cached[0].min_contrast_oklch(white, min_contrast);
+    } else if (this.theme_mode === 'light') {
+      this.cached[0] = this.cached[0].min_contrast_oklch(black, min_contrast);
+    } else {
+      this.cached[0].l = Math.max(this.cached[0].l, 10);
+    }
+    
     if (this.gen_mode === 'normal') {
-      this.text = this.panel.shade_oklch('c(+20%)').min_contrast_color(this.panel, min_contrast);
+      this.cached[1] = this.panel.shade_oklch('c(+20%)').min_contrast_oklch(this.cached[0], min_contrast);
+      this.cached[4] = this.panel.shade_oklch(`c(+10%) l(50%)`).min_contrast_color(this.cached[0], min_contrast);
+      this.cached[5] = this.cached[4].shade_oklch(`l(+10%)`).min_contrast_color(this.cached[0], min_contrast);
     } else if (this.gen_mode === 'colorful') {
-      this.text = this.panel.shade_oklch("h(+60) c(+20%)").min_contrast_color(this.panel, min_contrast);
+      this.cached[1] = this.panel.shade_oklch("h(-90) c(90%) l(50%)").min_contrast_oklch(this.cached[0], min_contrast);
+      this.cached[4] = this.panel.shade_oklch(`h(-180) c(90%) l(50%)`).min_contrast_oklch(this.cached[0], min_contrast);
+      this.cached[5] = this.panel.shade_oklch(`h(-270) c(90%) l(50%)`).min_contrast_oklch(this.cached[0], min_contrast);
     } else if (this.gen_mode === 'dual') {
-      this.text = this.text.min_contrast_color(this.panel, min_contrast);
+      this.cached[1] = this.text.min_contrast_oklch(this.cached[0], min_contrast);
+      this.cached[4] = this.cached[1].shade_oklch(`c(+10%) l(50%)`).min_contrast_color(this.cached[0], 4.5);
+      this.cached[5] = this.cached[0].blend(this.cached[4], 0.5, 'oklch').min_contrast_color(this.cached[0], 4.5);
     }
-    if (this.panel.contrast_ratio(this.text) < min_contrast) {
-      this.panel = this.panel.min_contrast_color(this.text, min_contrast);
+    
+    this.cached[2] = this.cached[0].shade_oklch("l(-45%)");
+    this.cached[3] = this.cached[1].shade_oklch("l(-5%)").min_contrast_oklch(this.cached[2], min_contrast);
+    
+    
+    
+    if (this.text.contrast_ratio(this.cached[1]) < min_contrast) {
+    
+    } else { // White mode
+      // if (this.theme_mode === 'dark') {
+      //   this.cached[0] = this.cached[0].min_contrast_oklch(this.text, min_contrast);
+      // }
+      // this.cached[2] = this.cached[0].shade_oklch("l(+15%)");
     }
+
+    
     return this;
   }
   
   randomize() {
-    const min_contrast = data.loaded.options.min_contrast || 5.0;
-    this.panel = this.panel.randomize();
-    this.panel.l = Math.max(Math.min(this.panel.l, 25), 10);
+    const min_contrast = 5.0;
+    this.panel = this.panel.clone().randomize();
+    this.panel.l = Math.max(this.panel.l, 25);
     if (this.gen_mode === 'dual') {
       let tones = 5;
       let h = 360 / tones * QRandomInt(1, tones);
-      let s = QRandomInt(30, 100);
+      let s = QRandomInt(1, 38) / 100;
       this.text = this.panel.clone();
-      this.text = this.text.shade(`h(+${h}) s(${s}%) l(50%)`).min_contrast_color(this.panel, min_contrast);
-    } else {
-      this.update_secondary();
+      this.text = this.text.shade_oklch(`h(+${h}) s(${s}%) l(50%)`).min_contrast_color(this.panel, min_contrast);
     }
+    // this.update_secondary();
     return this;
   }
   
   apply() {
     console.info('Apply Theme Scheme', data);
     
-    
-    // function updateDynamicIcon(color1, color2) {
-    //   // Use 32x32 for high-density (Retina) support
-    //   const canvas = new OffscreenCanvas(32, 32);
-    //   const ctx = canvas.getContext('2d');
-    //
-    //   // Draw Background (Color 1)
-    //   ctx.fillStyle = color2;
-    //   ctx.beginPath();
-    //   ctx.roundRect(0, 0, 32, 32, 8); // Modern rounded corners
-    //   ctx.fill();
-    //
-    //   // Draw Accent Triangle (Color 2)
-    //   ctx.fillStyle = color1;
-    //   ctx.beginPath();
-    //   ctx.moveTo(32, 0);
-    //   ctx.lineTo(32, 32);
-    //   ctx.lineTo(0, 32);
-    //   ctx.closePath();
-    //   ctx.fill();
-    //
-    //   browser.browserAction.setIcon({
-    //     imageData: ctx.getImageData(0, 0, 32, 32)
+    // browser.browserSettings.overrideContentColorScheme
+    //   .set({value: this.theme_mode})
+    //   .then(value => {
+    //     // console.info(`Setting was modified: ${value}`);
     //   });
-    //
-    //   browser.sidebarAction.setIcon({
-    //     imageData: ctx.getImageData(0, 0, 32, 32)
-    //   });
-    // }
-    //
-    // updateDynamicIcon(this.panel.to_string(), this.text.to_string());
     
     QScheme.update_theme(this);
   }
@@ -188,23 +195,31 @@ export class QScheme {
   static update_theme(scheme) {
     console.info('Update Theme', scheme);
     
-    let {theme_mode, page_mode, /** @type QColor */ panel, /** @type QColor */ text} = scheme;
+    let {theme_mode, page_mode} = scheme;
+    
+    if (!scheme.cached || scheme.cached.length < 4) {
+      scheme.update_secondary();
+    }
+    
+    let panel = scheme.cached[0] || scheme.panel;
+    let text = scheme.cached[1] || scheme.text;
+    let toolbar_field = scheme.cached[2] || scheme.text;
+    let toolbar_field_text = scheme.cached[3] || scheme.text;
+    let icon_color = scheme.cached[4] || scheme.text;
     
     
-    const black = new QColor('hsl(0, 0%, 0%)');
-    const white = new QColor('hsl(0, 0%, 100%)');
     
-    let hlcolor = panel.shade("h(+20%) s(80) l(50)");
+    let hlcolor = scheme.cached[5] || icon_color.shade_oklch("l(+10%)");
     
     // let icon_color = panel.shade(`s(${Math.min(text.s, 45)}) l(${Math.min(text.l, 85)}) `);
     
     // let icon_color = panel.shade_oklch(`c(+20%) l(0%)`).min_contrast_color(panel, 5);
-    let icon_color = panel.shade(`s(+20%) l(0.001)`).min_contrast_color(panel, 5);
+    // let icon_color = panel.shade(`s(+20%) l(0.001)`).min_contrast_color(panel, 5);
+    // let icon_color = panel.blend(text, 0.5, 'oklch').shade_oklch('c(0.35) l(0.01)')
+    //   .min_contrast_oklch(panel, 5);
+    // let icon_color = c3;
     
-    if (theme_mode === 'dark') {
-      // panel = panel.min_contrast_color(white, 3);
-      // icon_color = icon_color.min_contrast_color(panel, 3);
-    }
+    
     
     /** @type {_manifest.ThemeType} */
     let theme = {};
@@ -215,7 +230,8 @@ export class QScheme {
     theme = {
       properties: {
         // "color_scheme":         theme_mode, // Chrome and built-in pages
-        "content_color_scheme": "dark", // Built-in pages, overides color_scheme
+        "color_scheme":         theme_mode, // Chrome and built-in pages
+        "content_color_scheme": theme_mode, // Built-in pages, overides color_scheme
         // "additional_backgrounds_alignment": ['left top'],
         // "additional_backgrounds_tiling":    ['repeat'],
         // "focus_outline": "--focus-outline-color"
@@ -228,19 +244,21 @@ export class QScheme {
         // "button_background_hover":  text.shade('a(0.15)').to_string(),
         // "button_background_hover":  text.blend(panel, 0.50, 'rgb').to_string(),
         // "button_background_active": text.blend(panel, 0.50, 'hsl').to_string(),
-        "button_background_hover":  text.shade('a(0.15)').to_string(),
-        "button_background_active": text.shade('a(0.3)').to_string(),
+        "button_background_hover":  text.shade_oklch('a(0.15)').to_string(),
+        "button_background_active": text.shade_oklch('a(0.25)').to_string(),
         "icons":                    icon_color.to_string(),
-        "icons_attention":          icon_color.shade("l(+10%)").to_string(),
+        "icons_attention":          hlcolor.to_string(),
         
         
         // -- Tabs
         "tab_background_text":      text.to_string(),
         "tab_text":                 text.to_string(),
         "tab_background_separator": `transparent`,
-        "tab_line":                 panel.shade('l(-35%)').to_string(),
-        "tab_selected":             text.shade('a(0.3)').to_string(),
-        "tab_loading":              hlcolor.to_string(),
+        // "tab_line":                 panel.min_contrast_oklch(panel, 2.5).to_string(),
+        "tab_line":     text.shade_oklch('a(0)').to_string(),
+        "tab_selected": text.shade_oklch('a(0.35)').to_string(),
+        "tab_loading":  hlcolor.to_string(),
+        
         
         
         // -- Toolbar
@@ -262,17 +280,17 @@ export class QScheme {
         // "toolbar_field_border_focus": panel.shade_oklch("l(-60%) a(-5%)").to_string(),
         // "toolbar_field_text_focus":   text.to_string(),
         
-        "toolbar_field_highlight":      text.shade("a(0.15)").to_string(),
-        "toolbar_field_highlight_text": "pink",
+        // "toolbar_field_highlight":      text.to_string(),
+        // "toolbar_field_highlight_text": text.min_contrast_oklch(text, 7).to_string(),
         
         
         
         // -- Popup
         // "popup":                panel.shade_oklch("l(-10%) a(-4%)").to_string(),
         // "popup_border":         panel.shade_oklch("l(+10%) a(-4%)").to_string(),
-        "popup_text":           text.to_string(),
-        "popup_highlight":      panel.shade_oklch("l(-80%)").to_string(),
-        "popup_highlight_text": text.to_string(),
+        // "popup_text":           text.to_string(),
+        // "popup_highlight":      panel.shade_oklch("l(-80%)").to_string(),
+        // "popup_highlight_text": text.to_string(),
         
         
         // -- Sidebar
@@ -285,7 +303,7 @@ export class QScheme {
         
         
         // -- New Tab
-        "ntp_background":      panel.shade_oklch("l(-45%)").to_string(),
+        "ntp_background":      panel.shade_oklch("l(-35%)").to_string(),
         "ntp_card_background": panel.shade_oklch("l(-10%)").to_string(),
         "ntp_text":            text.to_string(),
         
@@ -299,31 +317,35 @@ export class QScheme {
     // colors.ntp_card_background = 'blue';
     // colors.ntp_text = 'red';
     // let tff = panel.shade_oklch("l(-60%) a(-5%)");
-    let tf = panel.shade_oklch("l(-45%) a(-9%)");
-    let tft = text.min_contrast_oklch(tf, 5);
+    let tf = toolbar_field.shade_oklch("a(-9%)");
+    let tft = toolbar_field_text;
     colors.toolbar_field = tf.to_string();
-    colors.toolbar_field_border = panel.shade_oklch('l(+18%)').to_string();
+    colors.toolbar_field_border = panel.shade_oklch('l(+12%)').to_string();
     colors.toolbar_field_text = tft.to_string();
     
     colors.toolbar_field_focus = tf.to_string();
     colors.toolbar_field_border_focus = tf.to_string();
-    // colors.toolbar_field_text_focus = colors.toolbar_field_text;
-    let pp = panel.shade_oklch('l(-20%) a(-4%)');
-    colors.popup = pp.to_string();
-    colors.popup_border = pp.shade_oklch('l(+25%)').to_string();
+    colors.toolbar_field_text_focus = tft.to_string();
     
-    // if (theme_mode === 'light') {
-    //   colors.toolbar_field = panel.shade("l(-10%)").to_string();
-    //   colors.toolbar_field_border = theme.colors.toolbar_field;
-    //   // theme.colors.toolbar_field_text = text.shade(`l(${100 - text.l})`).shade("l(+10%)").to_string();
-    //   theme.colors.toolbar_field_focus = panel.shade("l(+5%) s(-5%) a(-5%)").to_string();
-    //   theme.colors.toolbar_field_border_focus = theme.colors.toolbar_field_focus;
-    //   theme.colors.toolbar_field_text_focus = theme.colors.toolbar_field_text;
-    //   // theme.colors.toolbar_field_highlight = panel.shade("l(-80%) a(0.15)").to_string();
-    // }
+    colors.toolbar_field_highlight = tft.shade_oklch("a(-15%)").to_string();
+    colors.toolbar_field_highlight_text = tft.min_contrast_oklch(tft, 7).to_string();
+    
+    let pp = panel.shade_oklch('l(-20%) a(-4%)');
+    let pphl = pp.shade_oklch('l(-80%)');
+    colors.popup = pp.to_string();
+    // colors.popup_text = text.min_contrast_oklch(pp, 5).to_string();
+    colors.popup_text = text.to_string();
+    colors.popup_border = pp.shade_oklch('l(+25%)').to_string();
+    colors.popup_highlight = pphl.to_string();
+    colors.popup_highlight_text = pphl.min_contrast_oklch(pphl, 5).to_string();
+    
+    colors.focus_outline = panel.shade_oklch('l(+20%) a(0.9)').to_string();
+    
+    
+    
     
     // let hl = panel.shade_oklch(`h(${text.get_oklch().h})`);
-    let hl = panel.blend(text, 0.1, 'oklch').shade_oklch(`l${panel.get_oklch().l}`);
+    // let hl = panel.blend(text, 0.1, 'oklch').shade_oklch(`l${panel.get_oklch().l}`);
     
     // let img = QScheme.gen_gradient([
     //   // panel.to_string(), panel.shade_oklch(`h(${text.get_oklch().h})`).to_string(), panel.to_string()
@@ -448,7 +470,15 @@ export class QScheme {
     //   console.info('SVG Loaded', svg_url);
     // });
     
-    browser.theme.update(theme);
+    let apply = new Promise((resolve, reject) => {
+      browser.browserSettings.overrideContentColorScheme
+      .set({value: scheme.theme_mode})
+      .then(value => {
+        // console.info(`Setting was modified: ${value}`);
+      });
+      browser.theme.update(theme);
+      resolve();
+    });
     
     return scheme;
   }

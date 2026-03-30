@@ -1,54 +1,35 @@
 export class QColor {
   #regex = {
-    /**
-     * Matches HSL and HSLA color strings, capturing the following groups:<br>
-     * 01: "hsl" or "hsla" <br>
-     * 02: Hue value (0-360 with optional decimal)<br>
-     * 03: Optional "deg" unit for hue<br>
-     * 04: Separator for saturation (comma or whitespace with optional surrounding whitespace)<br>
-     * 05: Saturation value (0-100 with optional decimal)<br>
-     * 06: Optional "%" unit for saturation<br>
-     * 07: Separator for lightness (comma or whitespace with optional surrounding whitespace)<br>
-     * 08: Lightness value (0-100 with optional decimal)<br>
-     * 09: Optional "%" unit for lightness<br>
-     * 10: All optional alpha components (including separator)<br>
-     * 11: Separator for alpha (comma or slash with optional surrounding whitespace)<br>
-     * 12: Optional alpha value (0-100 with optional decimal or percentage)<br>
-     * 13: Optional "%" unit for alpha<br>
-     */
     hsl: /^\s*(hsla?)\(\s*((?:3[0-5][0-9]|[0-2]?[0-9]{1,2})(?:\.\d*)?|\.\d+|360(?:\.0*)?)(deg)?\s*(\s*,\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?\s*(\s*,\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?\s*((\s*[,\/]\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?)?\s*\)\s*$/i
   };
-  
-  /**
-   *
-   * @type {{[key:string]: {parse: function(string), to_string: function(QColor, number)}}}
-   */
+
+  /** @type {{[key:string]: {parse: function(string), to_string: function(QColor, number, boolean)}}} */
   static modes = {
     hsl:   {
       parse:     (str) => {
       
       },
-      to_string: (color, precision) => {
+      to_string: (color, precision, force_alpha = false) => {
         const parts = [
           QColor.#to_fixed(color.h, precision),
           QColor.#to_fixed(color.s, precision) + "%",
           QColor.#to_fixed(color.l, precision) + "%",
         ];
-        if (color.a < 1) parts.push('/', QColor.#to_fixed(color.a, 2));
+        if (color.a < 1 || force_alpha) parts.push('/', QColor.#to_fixed(color.a, 3));
         
         return `hsl(${parts.join(" ")})`;
       }
     },
     rgb:   {
       parse:     (str) => {},
-      to_string: (color, precision) => {
+      to_string: (color, precision, force_alpha = false) => {
         const rgb = QColor.hsl_to_rgb(color.h, color.s, color.l);
         const parts = [
           QColor.#to_fixed(rgb.r, precision),
           QColor.#to_fixed(rgb.g, precision),
           QColor.#to_fixed(rgb.b, precision),
         ];
-        if (color.a < 1) parts.push('/', QColor.#to_fixed(color.a, 2));
+        if (color.a < 1 || force_alpha) parts.push('/', QColor.#to_fixed(color.a, 3));
         
         return `rgb(${parts.join(" ")})`;
       }
@@ -57,7 +38,7 @@ export class QColor {
       parse:     (str) => {
       
       },
-      to_string: (color, precision) => {
+      to_string: (color, precision, force_alpha = false) => {
         const rgb = QColor.hsl_to_rgb(color.h, color.s, color.l);
         let hex = QColor.rgb_to_hex(rgb.r, rgb.g, rgb.b);
         
@@ -69,14 +50,14 @@ export class QColor {
     },
     oklch: {
       parse:     (str) => {},
-      to_string: (color, precision) => {
+      to_string: (color, precision, force_alpha = false) => {
         const oklch = QColor.hsl_to_oklch(color.h, color.s, color.l);
         const parts = [
           QColor.#to_fixed(oklch.l, precision),
           QColor.#to_fixed(oklch.c, precision),
           QColor.#to_fixed(oklch.h, precision),
         ];
-        if (color.a < 1) parts.push('/', QColor.#to_fixed(color.a, 2));
+        if (color.a < 1 || force_alpha) parts.push('/', QColor.#to_fixed(color.a, 3));
         
         return `oklch(${parts.join(' ')})`;
       }
@@ -223,12 +204,12 @@ export class QColor {
    * Todo: Consider legacy vs modern formatting for RGB(A) as well.
    * @param {'hsl'|'rgb'|'hex'|'oklch'} mode Output format: 'hsl', 'rgb', 'hex', or 'oklch'
    * @param {number} precision of decimal places for HSL and RGB components (alpha is always 2 decimals)
-   * @param [legacy = true]
+   * @param [force_alpha] Whether to include alpha in the output even if it's 1 (fully opaque)
    * @returns {string}
    */
-  to_string(mode = 'oklch', precision = 8, legacy = true) {
+  to_string(mode = 'oklch', precision = 8, force_alpha = false) {
     mode = mode.toLowerCase();
-    return QColor.modes[mode].to_string(this, precision);
+    return QColor.modes[mode].to_string(this, precision, force_alpha);
   }
   
   clone() {
@@ -236,7 +217,7 @@ export class QColor {
   }
   
   toString() {
-    return this.to_string('hsl', 10);
+    return this.to_string('hsl', 8);
   }
   
   /**
@@ -245,7 +226,7 @@ export class QColor {
    * @param {number} tolerance
    * @returns {boolean}
    */
-  equals(other_color, tolerance = 1e-5) {
+  equals(other_color, tolerance = 1e-7) {
     return Math.abs(this.h - other_color.h) < tolerance
       && Math.abs(this.s - other_color.s) < tolerance
       && Math.abs(this.l - other_color.l) < tolerance

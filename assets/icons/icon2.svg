@@ -1,115 +1,73 @@
 <svg xmlns="http://www.w3.org/2000/svg"
-     width="256" height="1024"
-     style=""
-     viewBox="0 0 512 512"
+     width="48" height="48" viewBox="0 0 470 470"
+     style="--ring: #f45777; --leg: #57cef6"
 >
   <defs>
-    <style type="text/css">
-      svg {
-      --bg: hsl(240 0% 12%);
-      --c1: hsl(346.5, 90%, 61%);
-      --c2: hsl(240 100% 50%);
-      --grad1: linear-gradient(in oklch longer hue to right, red, red);
-      }
-    </style>
 
-    <filter id="inshadow">
-      <feOffset dx='1' dy='1'/>
-      <feGaussianBlur stdDeviation='1' result='blur'/>
-
-      <!-- Invert the drop shadow to create an inner shadow -->
-      <feComposite operator='out' in='SourceGraphic' in2='blur' result='inverse'/>
-
-      <!-- Color & Opacity -->
-      <feFlood flood-color='hsl(0, 0%, 100%)' flood-opacity='0.9' result='color'/>
-
-      <!-- Clip color inside shadow -->
-      <feComposite operator='in' in='color' in2='inverse' result='shadow'/>
-
-      <!-- Put shadow over original object -->
-      <feComposite operator='over' in='shadow' in2='SourceGraphic'
-      />
-
-    </filter>
-    <linearGradient id="primary"
-                    color-interpolation="linearRGB"
-                    gradientTransform="rotate(0)">
-
-      <stop offset="0.00" stop-color="oklch(from red l c h)"/>
-      <stop offset="0.50" stop-color="oklch(from green l c h)"/>
-      <stop offset="1.00" stop-color="oklch(from blue l c h)"/>
-
-      <!--      <stop offset="0.00" stop-color="hsl(0 100% 50%)"/>-->
-      <!--      <stop offset="0.25" stop-color="hsl(60 100% 50%)"/>-->
-      <!--      <stop offset="0.50" stop-color="hsl(180 100% 50%)"/>-->
-      <!--      <stop offset="0.75" stop-color="hsl(240 100% 50%)"/>-->
-      <!--      <stop offset="1.00" stop-color="hsl(360 100% 50%)"/>-->
-    </linearGradient>
-
-    <linearGradient id="secondary" color-interpolation="linearRGB"
-                    gradientTransform="rotate(90)"
+    <linearGradient id="ring-gradient"
+                    x1="0" y1="0" x2="1" y2="1"
+                    color-interpolation="auto"
     >
-      <stop offset="0.0" stop-color="oklch(from var(--c1) l c calc(h * 1.0))"/>
-      <stop offset="0.5" stop-color="oklch(from var(--c2) l c calc(h * 1.0))"/>
-      <stop offset="1.0" stop-color="oklch(from var(--c2) l c calc(h * 1.0))"/>
+
+      <stop offset="0%" stop-color="#f45777"/>
+      <stop offset="100%" stop-color="#F12750"/>
 
     </linearGradient>
 
-    <radialGradient id="grad2" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="hsl(240 50% 50%)"/>
-      <stop offset="100%" stop-color="hsl(240 50% 30%)"/>
-    </radialGradient>
+        <radialGradient id="radial-gradient"  color-interpolation="linearRGB"
+                        cx="50%" cy="50%" r="50%">
 
-    <filter id="blurshadow">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feOffset dx="0" dy="0" result="offsetBlur"/>
-      <feFlood flood-color="hsl(325 73% 0%)" flood-opacity="1" result="color"/>
+          <stop offset="00%"  stop-color="oklch(0.005 0.167 15)"/>
+          <stop offset="70%"  stop-color="oklch(0.005 0.167 15)"/>
+          <stop offset="95%"  stop-color="oklch(0.805 0.167 15)"/>
+          <stop offset="100%" stop-color="oklch(0.105 0.167 15)"/>
+        </radialGradient>
 
-      <feComposite operator="in" in="color" in2="offsetBlur" result="shadow"/>
 
-      <feComposite operator="over" in="SourceGraphic" in2="shadow"/>
-    </filter>
+    <linearGradient id="leg-gradient" x1="0" y1="0" x2="1" y2="1" color-interpolation="auto">
+      <stop offset="0%" stop-color="#57cef6"/>
+      <stop offset="100%" stop-color="#0EB9F2"/>
+    </linearGradient>
 
-    <filter id="shadow">
-      <feDropShadow dx="0" dy="0" stdDeviation="10"
-                    flood-color="hsl(325 73% 0%)"
+
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="1" dy="1" stdDeviation="4"
+                    flood-color="black"
                     flood-opacity="1"/>
     </filter>
 
-    <mask id="mask1">
-      <rect width="100%" height="100%" fill="white"/>
-      <circle cx="50%" cy="50%" r="calc(50% - 25%)" fill="black"/>
+    <filter id="innershadow">
+      <feOffset dx='0' dy='0'/>
+      <feGaussianBlur stdDeviation='10' result='blur'/>
+      <feComposite operator='out' in='SourceGraphic' in2='blur' result='inverse'/>
+      <feFlood flood-color='black' flood-opacity='0.9' result='color'/>
+      <feComposite operator='in' in='color' in2='inverse' result='shadow'/>
+      <feComposite operator='over' in='shadow' in2='SourceGraphic'/>
+    </filter>
+
+
+    <mask id="mask">
+      <rect x="0" y="0" width="100%" height="100%" fill="white"/>
+      <circle cx="50%" cy="50%" r="135" fill="black"/>
     </mask>
-
   </defs>
-  <rect width="100%" height="100%" fill="hsl(240 0% 12% / 0.5)"/>
 
-  <path fill="lightblue" stroke="navy" stroke-width="4"
-    d="M 50,10
-       A 40,40 0 1,1 50,90
-       A 40,40 0 1,1 50,10
-       Z
-       M 50,30
-       A 20,20 0 1,0 50,70
-       A 20,20 0 1,0 50,30
-       Z" />
+  <g filter="url(#shadow)" id="ring-group">
 
-  <g filter="url(#shadow)" >
-
-    <circle cx="50%" cy="50%" r="calc(50% - 25px)" fill="url(#primary)" mask="url(#mask1)"/>
-
-    <rect width="50" height="66%" x="calc(50% - 25px)" y="50%"
-          ry="0" rx="0"
-          style="transform: rotateZ(-45deg); transform-origin: 50% 50%;"
-          filter="url(#inshadow)" stroke="hsl(0 0% 0%)" stroke-width="0"
-    />
+    <g overflow="visible">
+      <circle cx="50%" cy="50%" r="220" fill="url(#ring-gradient)" mask="url(#mask)" id="ring"/>
+    </g>
   </g>
 
-
-
-
-
-
-
+  <g filter="url(#shadow)">
+    <g transform="rotate(-45 235 235)" overflow="visible">
+      <rect x="235" y="235"
+            width="80" height="230"
+            rx="40" ry="40"
+            fill="url(#leg-gradient)"
+            style="transform-origin: 50% 50%; transform:  translate(-40px, 65px)"
+      />
+    </g>
+  </g>
 
 </svg>

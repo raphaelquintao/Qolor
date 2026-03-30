@@ -28,25 +28,49 @@ export class QSlider extends EventTarget {
   set show_output(value) {
     this._show_output = !!value;
     if (this.output_value) {
-      if (this._show_output) {
-        this.output_value.style.visibility = '';
-        this.output_value.style.position = '';
-        this.container.style.grid_template_columns = 'auto 1fr 2em';
-      } else {
-        this.container.style.grid_template_columns = 'auto 1fr';
-      }
-      
       this.output_value.style.visibility = this._show_output ? '' : 'collapse';
       this.output_value.style.position = this._show_output ? '' : 'absolute';
+      this._update_grid();
+      this._update_ui();
     }
   }
   
+  set show_label(value) {
+    this._show_label = !!value;
+    if (this.label) {
+      this.label.style.visibility = this._show_label ? '' : 'collapse';
+      this.label.style.position = this._show_label ? '' : 'absolute';
+      this._update_grid();
+      this._update_ui();
+    }
+  }
+  
+  
+  _update_grid() {
+    if (this._show_label && this._show_output) {
+      this.container.style.gridTemplateColumns = 'auto 1fr auto';
+    } else if (this._show_label) {
+      this.container.style.gridTemplateColumns = 'auto 1fr';
+    } else if (this._show_output) {
+      this.container.style.gridTemplateColumns = '1fr auto';
+    } else {
+      this.container.style.gridTemplateColumns = '1fr';
+    }
+  }
+  
+  
   constructor({
     min = 0, max = 100, step = 1, min_step = 1, value = 50, precision = null,
-    label = "", show_output = true, classes = [], group_container = null
+    label = "", show_output = true, show_label = true, classes = [], group_container = null
   }) {
     super();
-    Object.assign(this, {min, max, step, min_step, _label: label, _show_output: show_output, _classes: classes});
+    Object.assign(this, {
+      min, max, step, min_step,
+      _label:       label,
+      _show_output: show_output,
+      _show_label:  show_label,
+      _classes:     classes
+    });
     this._precision = precision ?? (String(step).split('.')[1] || '').length;
     this.min_step = 1 / Math.pow(10, this._precision);
     this._value = this._clamp(value);
@@ -57,6 +81,7 @@ export class QSlider extends EventTarget {
     }
     this._create_elements();
     this._bind_events();
+    this._update_grid();
     this._update_ui();
     
   }
@@ -168,12 +193,14 @@ export class QSlider extends EventTarget {
   _update_ui() {
     const percent = (this._value - this.min) / (this.max - this.min) * 100;
     // this.out.innerText = `${parseFloat(this._value.toFixed(this.precision))}`;
-    const display_value = this._value.toFixed(this.precision).split('.')
-      .map((part, index) => {
-        if (index === 0) return `${part}`;
-        return `<small>.${part}</small>`;
-      }).join('');
-    this.output_value.innerHTML = display_value;
+    if (this._show_output) {
+      const display_value = this._value.toFixed(this.precision).split('.')
+        .map((part, index) => {
+          if (index === 0) return `${part}`;
+          return `<small>.${part}</small>`;
+        }).join('');
+      this.output_value.innerHTML = display_value;
+    }
     // this.thumb.dataset.title = display_value;
     this.thumb.style.left = `${percent}%`;
   }
@@ -245,6 +272,8 @@ export class QSlider extends EventTarget {
  * @property {'hsl'|'hex'|'rgb','oklch'} [output_mode] - Format for output value
  * @property {boolean} [show_output] - Whether to show the output value
  * @property {boolean} [show_output_mode_selector] - Whether to show the output mode selector
+ * @property {boolean} [show_preview] - Whether to show the color preview
+ * @property {boolean} [show_slider_label] - Whether to show labels on sliders
  * @property {boolean} [show_slider_value] - Whether to show the current value on sliders
  * @property {boolean} [legacy_output] - Whether to use legacy output format (with commas)
  * @property {boolean} [disabled] - Whether the picker is disabled
@@ -262,17 +291,19 @@ export class QPicker extends EventTarget {
     label:                     "",
     alpha:                     false,
     area_size:                 140,
-    picker_mode:               'hsv',
+    picker_mode:               'hsl',
     output_mode:               'hsl',
     show_output:               true,
     show_output_mode_selector: true,
+    show_preview:              false,
+    show_slider_label:         true,
     show_slider_value:         true,
     legacy_output:             false,
     disabled:                  false,
     precision:                 2,
   };
   
-  static #OUTPUT_MODES = Object.keys(QColor.modes);
+  static OUTPUT_MODES = Object.keys(QColor.modes);
   
   // ---- Options ----
   
@@ -303,6 +334,15 @@ export class QPicker extends EventTarget {
     this.out_mode_selector.style.display = value ? '' : 'none';
   }
   
+  set show_preview(value) {
+    this.#options.show_preview = value;
+    this.preview.style.display = value ? '' : 'none';
+  }
+  
+  get show_preview() {
+    return this.#options.show_preview;
+  }
+  
   get show_slider_value() {
     return this.#options.show_slider_value;
   }
@@ -315,13 +355,25 @@ export class QPicker extends EventTarget {
     this.alpha_slider.show_output = this.#options.show_slider_value;
   }
   
+  set show_slider_label(value) {
+    this.#options.show_slider_label = !!value;
+    this.hue_slider.show_label = this.#options.show_slider_label;
+    this.saturation_slider.show_label = this.#options.show_slider_label;
+    this.lightness_slider.show_label = this.#options.show_slider_label;
+    this.alpha_slider.show_label = this.#options.show_slider_label;
+  }
+  
+  get show_slider_label() {
+    return this.#options.show_slider_label;
+  }
+  
   /** @returns {'hsla'|'rgba'|'hex'} */
   get output_mode() {
     return this.out_modes.find(r => r.checked).value;
   }
   
   set output_mode(mode) {
-    if(!QPicker.#OUTPUT_MODES.includes(mode)) {
+    if (!QPicker.OUTPUT_MODES.includes(mode)) {
       console.warn(`Invalid output mode: ${mode}`);
       return;
     }
@@ -329,7 +381,21 @@ export class QPicker extends EventTarget {
     for (let r of this.out_modes) {
       r.checked = (r.value === mode);
     }
+    this.#update_ui(false, true);
+  }
+  
+  set picker_mode(mode) {
+    if (!['hsl', 'hsv'].includes(mode)) {
+      console.warn(`Invalid picker mode: ${mode}`);
+      return;
+    }
+    this.#options.picker_mode = mode;
+    this.#setup_color_area();
     this.#update_ui(false, false);
+  }
+  
+  get picker_mode() {
+    return this.#options.picker_mode;
   }
   
   get precision() {
@@ -363,6 +429,7 @@ export class QPicker extends EventTarget {
     this.#options.alpha = value;
     this.#update_ui(false);
   }
+  
   
   
   set disabled(value) {
@@ -403,6 +470,9 @@ export class QPicker extends EventTarget {
     this.show_output_mode_selector = this.#options.show_output_mode_selector;
     this.precision = this.#options.precision;
     this.show_slider_value = this.#options.show_slider_value;
+    this.show_slider_label = this.#options.show_slider_label;
+    this.show_preview = this.#options.show_preview;
+    this.disabled = this.#options.disabled;
     
     this.set_initial_color((new QColor()).randomize());
     
@@ -429,7 +499,7 @@ export class QPicker extends EventTarget {
   #create_elements() {
     this.container = document.createElement('div');
     this.container.classList.add('qpicker');
-    this.container.style.setProperty('--qp-area-size', this.#options.area_size + 'px');
+    // this.container.style.setProperty('--qp-area-size', this.#options.area_size + 'px');
     
     
     this.color_area = document.createElement('div');
@@ -450,7 +520,11 @@ export class QPicker extends EventTarget {
       classes:         ['qp-hue'],
       group_container: slider_group
     });
-    
+    const hue_gradient = [
+      'in hsl longer hue to right', 'hsl(0 70% 50%)', 'hsl(360 70% 50%)'
+    ];
+    this.hue_slider.tracker.style.background = `linear-gradient(${hue_gradient.join(', ')}) no-repeat`;
+    this.hue_slider.thumb.style.backgroundColor = 'hsl(from var(--qp-hsla) h 70% 50% / 1)';
     
     this.saturation_slider = new QSlider({
       label:           "S", min: 0, max: 100,
@@ -459,6 +533,8 @@ export class QPicker extends EventTarget {
       classes:         ['qp-saturation'],
       group_container: slider_group
     });
+    this.saturation_slider.tracker.style.background = 'linear-gradient(to right, hsl(from var(--qp-hsla) h 0% 50%  / 1), hsl(from var(--qp-hsla) h 100% 50%  / 1)) no-repeat';
+    this.saturation_slider.thumb.style.backgroundColor = 'hsl(from var(--qp-hsla) h s 50% / 1)';
     
     
     this.lightness_slider = new QSlider({
@@ -468,6 +544,14 @@ export class QPicker extends EventTarget {
       classes:         ['qp-lightness'],
       group_container: slider_group
     });
+    const lg = [
+      'to right',
+      'hsl(from var(--qp-hsla) h s 5%  / 1)',
+      'hsl(from var(--qp-hsla) h s 50%  / 1)',
+      'hsl(from var(--qp-hsla) h s 90%  / 1)'
+    ];
+    this.lightness_slider.tracker.style.background = `linear-gradient(${lg.join(', ')}) no-repeat`;
+    this.lightness_slider.thumb.style.backgroundColor = 'hsl(from var(--qp-hsla) h s l / 1)';
     
     
     this.alpha_slider = new QSlider({
@@ -478,6 +562,9 @@ export class QPicker extends EventTarget {
       classes:         ['qp-alpha'],
       group_container: slider_group
     });
+    this.alpha_slider.tracker.style.background = 'linear-gradient(to right, transparent, hsl(from var(--qp-hsla) h s l / 1)) no-repeat';
+    this.alpha_slider.tracker.style.background += ', var(--qp-bg-checker)';
+    this.alpha_slider.thumb.style.backgroundColor = 'var(--qp-hsla)';
     
     
     
@@ -506,15 +593,17 @@ export class QPicker extends EventTarget {
     this.out_container = document.createElement('div');
     this.out_container.classList.add('qp-output');
     this.out_mode_selector = document.createElement('div');
-    this.out_mode_selector.classList.add('qp-output-mode-selector' , 'button-toolbar');
+    this.out_mode_selector.dataset.name = `qp-output-mode-${crypto.randomUUID()}`;
+    this.out_mode_selector.classList.add('qp-output-mode-selector', 'button-toolbar');
     
     /** @type {HTMLInputElement[]} */
     this.out_modes = [];
     
-    for (let mode of QPicker.#OUTPUT_MODES) {
+    
+    for (let mode of QPicker.OUTPUT_MODES) {
       let radio = document.createElement('input');
       radio.type = 'radio';
-      radio.name = `qp-output-mode-${crypto.randomUUID()}`;
+      radio.name = this.out_mode_selector.dataset.name;
       radio.value = mode;
       radio.classList.add('btn');
       radio.checked = false;
@@ -688,8 +777,11 @@ export class QPicker extends EventTarget {
     
     this.container.style.setProperty('--qp-alpha', this.#color.a + '');
     this.container.style.setProperty('--qp-h', this.#color.h + '');
-    this.container.style.setProperty('--qp-sl', this.#color.s + '%');
+    this.container.style.setProperty('--qp-s', this.#color.s + '%');
     this.container.style.setProperty('--qp-l', this.#color.l + '%');
+    
+    // this.container.style.setProperty('--qp-oklch', this.color.to_string('oklch', 10, true));
+    this.container.style.setProperty('--qp-hsla', this.color.to_string('hsl', 10, true));
     
     if (this.#options.picker_mode === 'hsl') {
       const radius = 50;
