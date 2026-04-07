@@ -1,33 +1,16 @@
 # Qolor - A dynamic theme engine for Firefox
 
-A modern, advanced alternative to Firefox Color for users who want total UI coverage and automated contrast control.
+Generate full Firefox themes from one or two colors. OKLCH color engine for perfect look and feel.
 
-Every combination has a perfect look and feel.
 
-|                                                         Gui                                                          |                                                     Result                                                      |
-|:--------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------------------:|
-| ![Photophobia](https://user-images.githubusercontent.com/2568375/132087425-c46c5289-cf14-41dc-87e9-fe7429899fa2.png) | ![Result](https://user-images.githubusercontent.com/2568375/132087483-19dd90a0-32da-4e56-a1b9-99c7aa42bc1b.png) |
-
-###### Why Qolor is different and so great?
+### Why Qolor is different?
 - **Exhaustive UI Coverage:** Unlike basic tools, Qolor sets every available theme variable including popups, sidebars and interactive button states.
-
+- **OKLCH Color Model:** Qolor uses the OKLCH color space, which allows for more perceptually uniform adjustments, ensuring that your themes look great and maintain consistent contrast.
 - **Perfect Contrast:** Our engine calculates relative luminance in real-time, automatically "nudging" shades to ensure your text is always readable and meets accessibility standards
+- **Dynamic Adaptation:** Qolor intelligently adjusts your theme based on the colors you choose, ensuring a cohesive and visually appealing experience across all UI elements.
+- **User-Friendly Interface:** With a clean and intuitive design, Qolor makes it easy for anyone to create stunning themes without needing design expertise.
+- **Auto Sync:** Your themes are automatically saved and synced across devices using Firefox Sync, so you can enjoy your custom look wherever you go.
 
-
-- Lightweight & private: tiny extension, local settings only — no telemetry.
-- Crystal clear text: separate controls for text and panels keep content readable without losing style.
-- Instant comfort: tweak contrast, brightness, hue and saturation with live preview — no restarts.
-- Ready presets: switch between Night, Day, and High‑Contrast in one click.
-
-**Features at a glance**
-- Optmized for new Vertical Tabs 
-
-Privacy & accessibility
-- Designed to improve legibility and reduce eye strain.
-- All settings are stored locally in your browser — no data leaves your machine.
-
-Compatibility
-- Works with modern Firefox desktop releases.
 
 Support
 - Have feedback or need an adjustment? Use the addon page to contact the author or leave a review.

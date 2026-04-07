@@ -8,6 +8,15 @@ export function UUID() {
   return crypto.randomUUID();
 }
 
+export function FASTHASH(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash >>> 0;
+}
+
 export function BYTES_TO_STRING(_bytes) {
   const sizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB'];
   if (_bytes === 0) return '0 Byte';
@@ -166,9 +175,9 @@ export class QCollection {
    */
   equals(qcollection) {
     if (JSON.stringify(qcollection.options) !== JSON.stringify(this.options)) return false;
-    if(qcollection.schemes.length !== this.schemes.length) return false;
+    if (qcollection.schemes.length !== this.schemes.length) return false;
     for (let other of qcollection.schemes) {
-      if(!other.equals(this.find_by_id(other.id))) return false;
+      if (!other.equals(this.find_by_id(other.id))) return false;
     }
     
     return true;
@@ -188,7 +197,7 @@ export class QCollection {
       for (let scheme of obj._schemes) {
         let _scheme = new QScheme();
         _scheme.parse(scheme);
-        _scheme.update_secondary();
+        _scheme.compute_colors();
         this.add(_scheme);
       }
     }

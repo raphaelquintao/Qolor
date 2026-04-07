@@ -17,8 +17,8 @@
 
 
   /* Input */
-  --q-input-height: 2.3em;
-  --q-input-font-size: 0.875em;
+  --q-input-height: 2.5em;
+  --q-input-font-size: 0.9em;
   --q-input-bg-color: oklch(from var(--q-base) calc(l * 0.85) c h);
   --q-input-border-color: oklch(from var(--q-base) 2% c h / 1);
   --q-input-fg-color: inherit;
@@ -27,7 +27,7 @@
 
 
   /* Button */
-  --q-button-font-size: 0.875em;
+  --q-button-font-size: 0.9em;
   --q-button-bg-color: oklch(from var(--q-base) calc(l + 0.095) c h);
   --q-button-border-color: oklch(from var(--q-base) 1% c h);
   --q-button-fg-color: inherit;
@@ -85,6 +85,7 @@
   /*   outline-color: red !important; */
 
   scrollbar-width: thin;
+  shape-rendering: geometricprecision;
 }
 
 @keyframes breath {
@@ -203,7 +204,7 @@ label {
 hr {
   z-index: 1;
   box-sizing: content-box !important;
-  height: 1px ;
+  height: 1px;
   margin: 0;
   border: 0;
   /*display: block;*/
@@ -239,7 +240,7 @@ input[type="file"],
 [contenteditable="true"]:focus,
 textarea {
   font-size: var(--q-input-font-size);
-  line-height: 1;
+  line-height: 1.1;
   box-sizing: border-box;
   height: var(--q-input-height);
   margin: 0;
@@ -278,14 +279,16 @@ textarea {
   padding: 0;
   transition: background 200ms ease, padding 200ms ease;
   border: 1px solid transparent;
+  text-overflow: ellipsis;
+  text-wrap: nowrap;
 
   &[contenteditable="true"]:not(:focus) {
     border-bottom: 1px dashed oklch(from currentColor l c h / 0.4);
   }
 
   &:focus {
-    line-height: var(--q-input-height);
     padding: 0.0em 0.6em;
+    line-height: var(--q-input-height);
     transition: background 200ms ease, padding 200ms ease;
   }
 }

@@ -4,6 +4,19 @@ import { QRandomInt } from './q_utils.js';
 export class QScheme {
   /** @type {QColor[]} */
   cached = [];
+  cached_theme = null;
+  hash_colors = null;
+  hash_theme = null;
+  
+  
+  get editable() {
+    return (!this.locked && !this.default);
+  }
+  
+  get default() {
+    return (this.id === '_default');
+  }
+  
   
   constructor(name = "", id = "") {
     this.id = (id === "") ? QScheme.unique_id() : id;
@@ -21,19 +34,17 @@ export class QScheme {
     /** @type {QColor} */
     this.text = new QColor('hsl(214, 2%, 90%)');
     
+  }
+  
+  
+  hash() {
+    let tmp = `${this.id}|`;
+    tmp += `${this.gen_mode}|${this.theme_mode}|${this.page_mode}|`;
+    tmp += `${this.panel.to_string('hsl')}|${this.text.to_string('hsl')}`;
     
-    
-    return this;
+    return tmp;
   }
   
-  
-  get editable() {
-    return (!this.locked && !this.default);
-  }
-  
-  get default() {
-    return (this.id === '_default');
-  }
   
   
   parse(obj) {
@@ -44,25 +55,22 @@ export class QScheme {
     if (obj.theme_mode) this.theme_mode = obj.theme_mode;
     if (obj.page_mode) this.page_mode = obj.page_mode;
     
-    if (obj.panel) {
-      this.panel.h = parseFloat(obj.panel.h);
-      this.panel.s = parseFloat(obj.panel.s);
-      this.panel.l = parseFloat(obj.panel.l);
-      this.panel.a = parseFloat(obj.panel.a);
-    }
-    if (obj.text) {
-      this.text.h = parseFloat(obj.text.h);
-      this.text.s = parseFloat(obj.text.s);
-      this.text.l = parseFloat(obj.text.l);
-      this.text.a = parseFloat(obj.text.a);
-    }
-    
+    if (obj.panel) this.panel = new QColor(obj.panel);
+    if (obj.text) this.text = new QColor(obj.text);
     
     return this;
   }
   
-  update_secondary(min_contrast = 5) {
-    // if (data.loaded.options.min_contrast) min_contrast = data.loaded.options.min_contrast;
+  compute_colors(min_contrast = 5) {
+    const hash = this.hash();
+    // console.info('Computing colors for', this.id, 'with hash', hash);
+    
+    if (this.hash_colors === hash && this.cached.length >= 6) {
+      // console.log('Using cached colors for', this.name);
+      return this;
+    }
+    this.hash_colors = hash;
+    
     this.cached = [
       this.panel.clone(),
       this.text.clone(),
@@ -106,7 +114,7 @@ export class QScheme {
       // }
       // this.cached[2] = this.cached[0].shade_oklch("l(+15%)");
     }
-
+    
     
     return this;
   }
@@ -118,23 +126,15 @@ export class QScheme {
     if (this.gen_mode === 'dual') {
       let tones = 5;
       let h = 360 / tones * QRandomInt(1, tones);
-      let s = QRandomInt(1, 38) / 100;
+      let s = QRandomInt(1, 4) / 100;
       this.text = this.panel.clone();
-      this.text = this.text.shade_oklch(`h(+${h}) s(${s}%) l(50%)`).min_contrast_color(this.panel, min_contrast);
+      this.text = this.text.shade_oklch(`h(+${h}) `).min_contrast_oklch(this.panel, min_contrast);
     }
-    // this.update_secondary();
+    // this.compute_colors();
     return this;
   }
   
   apply() {
-    console.info('Apply Theme Scheme', data);
-    
-    // browser.browserSettings.overrideContentColorScheme
-    //   .set({value: this.theme_mode})
-    //   .then(value => {
-    //     // console.info(`Setting was modified: ${value}`);
-    //   });
-    
     QScheme.update_theme(this);
   }
   
@@ -188,299 +188,200 @@ export class QScheme {
   }
   
   /**
+   * @param {QColor} p
+   * @param {QColor} s
+   * @param {QColor} t
+   * @param gen_mode
+   * @returns {Promise<void>}
+   */
+  static async set_icon(p, s, t, gen_mode) {
+    if (!QScheme.svg_icon) {
+      QScheme.svg_icon = await fetch(browser.runtime.getURL('assets/icons/icon.svg')).then(resp => {
+        return resp.text();
+      });
+    }
+    
+    const svg_string = QScheme.svg_icon
+      .replaceAll(/--p:.+;/ig, `--primary: ${p.to_string()};`)
+      .replaceAll(/--s:.+;/ig, `--secondary: ${s.to_string()};`)
+      .replaceAll(/--t:.+;/ig, `--tertiary: ${t.to_string()};`)
+      .replaceAll(/class="colors"/ig, `class="colors gen-${gen_mode}"`);
+    
+    const svg_url = `data:image/svg+xml,${encodeURIComponent(svg_string)}`;
+    
+    
+    let promisses = [
+      browser.browserAction.setIcon({path: svg_url}),
+      browser.sidebarAction.setIcon({path: svg_url})
+    ];
+    
+    await Promise.all(promisses).catch(reason => console.error('Failed to set icon:', reason));
+  }
+  
+  /**
    * Set Browser Colors
    * @param {QScheme} scheme
-   * @return {QScheme}
+   * @return {theme}
    */
   static update_theme(scheme) {
-    console.info('Update Theme', scheme);
+    let {theme_mode} = scheme;
     
-    let {theme_mode, page_mode} = scheme;
+    scheme.compute_colors();
     
-    if (!scheme.cached || scheme.cached.length < 4) {
-      scheme.update_secondary();
-    }
     
     let panel = scheme.cached[0] || scheme.panel;
     let text = scheme.cached[1] || scheme.text;
     let toolbar_field = scheme.cached[2] || scheme.text;
     let toolbar_field_text = scheme.cached[3] || scheme.text;
     let icon_color = scheme.cached[4] || scheme.text;
+    let hlcolor = scheme.cached[5] || scheme.text;
     
+    QScheme.set_icon(text, icon_color, hlcolor, scheme.gen_mode);
     
-    
-    let hlcolor = scheme.cached[5] || icon_color.shade_oklch("l(+10%)");
-    
-    // let icon_color = panel.shade(`s(${Math.min(text.s, 45)}) l(${Math.min(text.l, 85)}) `);
-    
-    // let icon_color = panel.shade_oklch(`c(+20%) l(0%)`).min_contrast_color(panel, 5);
-    // let icon_color = panel.shade(`s(+20%) l(0.001)`).min_contrast_color(panel, 5);
-    // let icon_color = panel.blend(text, 0.5, 'oklch').shade_oklch('c(0.35) l(0.01)')
-    //   .min_contrast_oklch(panel, 5);
-    // let icon_color = c3;
-    
-    
-    
-    /** @type {_manifest.ThemeType} */
-    let theme = {};
-    // let theme = await browser.theme.getCurrent();
-    
-    // console.info('Current Theme', theme);
-    
-    theme = {
-      properties: {
-        // "color_scheme":         theme_mode, // Chrome and built-in pages
-        "color_scheme":         theme_mode, // Chrome and built-in pages
-        "content_color_scheme": theme_mode, // Built-in pages, overides color_scheme
-        // "additional_backgrounds_alignment": ['left top'],
-        // "additional_backgrounds_tiling":    ['repeat'],
-        // "focus_outline": "--focus-outline-color"
-        // "space_large": "yellow",
-      },
-      colors:     {
-        // -- General
-        "frame":          panel.to_string(),
-        "frame_inactive": panel.to_string(),
-        // "button_background_hover":  text.shade('a(0.15)').to_string(),
-        // "button_background_hover":  text.blend(panel, 0.50, 'rgb').to_string(),
-        // "button_background_active": text.blend(panel, 0.50, 'hsl').to_string(),
-        "button_background_hover":  text.shade_oklch('a(0.15)').to_string(),
-        "button_background_active": text.shade_oklch('a(0.25)').to_string(),
-        "icons":                    icon_color.to_string(),
-        "icons_attention":          hlcolor.to_string(),
-        
-        
-        // -- Tabs
-        "tab_background_text":      text.to_string(),
-        "tab_text":                 text.to_string(),
-        "tab_background_separator": `transparent`,
-        // "tab_line":                 panel.min_contrast_oklch(panel, 2.5).to_string(),
-        "tab_line":     text.shade_oklch('a(0)').to_string(),
-        "tab_selected": text.shade_oklch('a(0.35)').to_string(),
-        "tab_loading":  hlcolor.to_string(),
-        
-        
-        
-        // -- Toolbar
-        "toolbar":                    panel.shade_oklch('a(0)').to_string(),
-        "toolbar_text":               text.to_string(),
-        "toolbar_vertical_separator": text.shade_oklch('a(0.15)').to_string(),
-        "toolbar_field_separator":    text.shade_oklch("a(0.15)").to_string(),
-        // "toolbar_top_separator":      panel.shade_oklch("a(0)").to_string(),
-        "toolbar_top_separator":    'transparent',
-        "toolbar_bottom_separator": panel.shade_oklch("l(+8%)").to_string(),
-        // "bookmark_text":              "pink", // Alias for toolbar_text
-        
-        // -- URL Bar
-        // "toolbar_field":        panel.shade_oklch("l(-50%) a(-10%)").to_string(),
-        // "toolbar_field_border": panel.shade_oklch("l(+15%) a(-10%)").to_string(),
-        // "toolbar_field_text":   text.shade_oklch("l(-10%)").to_string(),
-        //
-        // "toolbar_field_focus":        panel.shade_oklch("l(-60%) a(-5%)").to_string(),
-        // "toolbar_field_border_focus": panel.shade_oklch("l(-60%) a(-5%)").to_string(),
-        // "toolbar_field_text_focus":   text.to_string(),
-        
-        // "toolbar_field_highlight":      text.to_string(),
-        // "toolbar_field_highlight_text": text.min_contrast_oklch(text, 7).to_string(),
-        
-        
-        
-        // -- Popup
-        // "popup":                panel.shade_oklch("l(-10%) a(-4%)").to_string(),
-        // "popup_border":         panel.shade_oklch("l(+10%) a(-4%)").to_string(),
-        // "popup_text":           text.to_string(),
-        // "popup_highlight":      panel.shade_oklch("l(-80%)").to_string(),
-        // "popup_highlight_text": text.to_string(),
-        
-        
-        // -- Sidebar
-        "sidebar":                panel.shade_oklch('l(-20%)').to_string(),
-        "sidebar_border":         panel.shade_oklch('l(-50%)').to_string(),
-        "sidebar_text":           text.to_string(),
-        "sidebar_highlight":      panel.shade_oklch('l(-50%)').to_string(),
-        "sidebar_highlight_text": text.to_string(),
-        
-        
-        
-        // -- New Tab
-        "ntp_background":      panel.shade_oklch("l(-35%)").to_string(),
-        "ntp_card_background": panel.shade_oklch("l(-10%)").to_string(),
-        "ntp_text":            text.to_string(),
-        
-        "accent_color": 'red',
-        "accentcolor":  'blue',
-      }
-    };
-    
-    const colors = theme.colors;
-    // colors.ntp_text = text.min_contrast_color(panel.shade_oklch("l(-45%)"), 5).to_string();
-    // colors.ntp_card_background = 'blue';
-    // colors.ntp_text = 'red';
-    // let tff = panel.shade_oklch("l(-60%) a(-5%)");
-    let tf = toolbar_field.shade_oklch("a(-9%)");
-    let tft = toolbar_field_text;
-    colors.toolbar_field = tf.to_string();
-    colors.toolbar_field_border = panel.shade_oklch('l(+12%)').to_string();
-    colors.toolbar_field_text = tft.to_string();
-    
-    colors.toolbar_field_focus = tf.to_string();
-    colors.toolbar_field_border_focus = tf.to_string();
-    colors.toolbar_field_text_focus = tft.to_string();
-    
-    colors.toolbar_field_highlight = tft.shade_oklch("a(-15%)").to_string();
-    colors.toolbar_field_highlight_text = tft.min_contrast_oklch(tft, 7).to_string();
-    
-    let pp = panel.shade_oklch('l(-20%) a(-4%)');
-    let pphl = pp.shade_oklch('l(-80%)');
-    colors.popup = pp.to_string();
-    // colors.popup_text = text.min_contrast_oklch(pp, 5).to_string();
-    colors.popup_text = text.to_string();
-    colors.popup_border = pp.shade_oklch('l(+25%)').to_string();
-    colors.popup_highlight = pphl.to_string();
-    colors.popup_highlight_text = pphl.min_contrast_oklch(pphl, 5).to_string();
-    
-    colors.focus_outline = panel.shade_oklch('l(+20%) a(0.9)').to_string();
+    if (scheme.cached_theme && scheme.hash_theme === scheme.hash()) {
+      console.log('Theme is up to date for', `${scheme?.id}` );
+    } else {
+      
+      
+      /** @type {_manifest.ThemeType} */
+      let theme = {};
+      
+      theme = {
+        properties: {
+          "color_scheme":         theme_mode, // Chrome and built-in pages
+          "content_color_scheme": theme_mode, // Built-in pages, overides color_scheme
+          // "additional_backgrounds_alignment": ['left top'],
+          // "additional_backgrounds_tiling":    ['repeat'],
+          // "focus_outline": "--focus-outline-color"
+          // "space_large": "yellow",
+        },
+        colors:     {
+          // -- General
+          "frame":          panel.to_string(),
+          "frame_inactive": panel.to_string(),
+          // "button_background_hover":  text.shade('a(0.15)').to_string(),
+          // "button_background_hover":  text.blend(panel, 0.50, 'rgb').to_string(),
+          // "button_background_active": text.blend(panel, 0.50, 'hsl').to_string(),
+          "button_background_hover":  text.shade_oklch('a(0.15)').to_string(),
+          "button_background_active": text.shade_oklch('a(0.25)').to_string(),
+          "icons":                    icon_color.to_string(),
+          "icons_attention":          hlcolor.to_string(),
+          
+          
+          // -- Tabs
+          "tab_background_text":      text.to_string(),
+          "tab_text":                 text.to_string(),
+          "tab_background_separator": `transparent`,
+          // "tab_line":                 panel.min_contrast_oklch(panel, 2.5).to_string(),
+          "tab_line":     text.shade_oklch('a(0)').to_string(),
+          "tab_selected": text.shade_oklch('a(0.35)').to_string(),
+          "tab_loading":  hlcolor.to_string(),
+          
+          
+          
+          // -- Toolbar
+          "toolbar":                    panel.shade_oklch('a(0)').to_string(),
+          "toolbar_text":               text.to_string(),
+          "toolbar_vertical_separator": text.shade_oklch('a(0.15)').to_string(),
+          "toolbar_field_separator":    text.shade_oklch("a(0.15)").to_string(),
+          // "toolbar_top_separator":      panel.shade_oklch("a(0)").to_string(),
+          "toolbar_top_separator":    'transparent',
+          "toolbar_bottom_separator": panel.shade_oklch("l(+8%)").to_string(),
+          // "bookmark_text":              "pink", // Alias for toolbar_text
+          
+          // -- URL Bar
+          // "toolbar_field":        panel.shade_oklch("l(-50%) a(-10%)").to_string(),
+          // "toolbar_field_border": panel.shade_oklch("l(+15%) a(-10%)").to_string(),
+          // "toolbar_field_text":   text.shade_oklch("l(-10%)").to_string(),
+          //
+          // "toolbar_field_focus":        panel.shade_oklch("l(-60%) a(-5%)").to_string(),
+          // "toolbar_field_border_focus": panel.shade_oklch("l(-60%) a(-5%)").to_string(),
+          // "toolbar_field_text_focus":   text.to_string(),
+          
+          // "toolbar_field_highlight":      text.to_string(),
+          // "toolbar_field_highlight_text": text.min_contrast_oklch(text, 7).to_string(),
+          
+          
+          
+          // -- Popup
+          // "popup":                panel.shade_oklch("l(-10%) a(-4%)").to_string(),
+          // "popup_border":         panel.shade_oklch("l(+10%) a(-4%)").to_string(),
+          // "popup_text":           text.to_string(),
+          // "popup_highlight":      panel.shade_oklch("l(-80%)").to_string(),
+          // "popup_highlight_text": text.to_string(),
+          
+          
+          // -- Sidebar
+          "sidebar":                panel.shade_oklch('l(-20%)').to_string(),
+          "sidebar_border":         panel.shade_oklch('l(-50%)').to_string(),
+          "sidebar_text":           text.to_string(),
+          "sidebar_highlight":      panel.shade_oklch('l(-50%)').to_string(),
+          "sidebar_highlight_text": text.to_string(),
+          
+          
+          
+          // -- New Tab
+          "ntp_background":      panel.shade_oklch("l(-35%)").to_string(),
+          "ntp_card_background": panel.shade_oklch("l(-10%)").to_string(),
+          "ntp_text":            text.to_string(),
+          
+          "accent_color": 'red',
+          "accentcolor":  'blue',
+        }
+      };
+      
+      const colors = theme.colors;
+      
+      let tf = toolbar_field.shade_oklch("a(-9%)");
+      let tft = toolbar_field_text;
+      colors.toolbar_field = tf.to_string();
+      colors.toolbar_field_border = panel.shade_oklch('l(+12%)').to_string();
+      colors.toolbar_field_text = tft.to_string();
+      
+      colors.toolbar_field_focus = tf.to_string();
+      colors.toolbar_field_border_focus = tf.to_string();
+      colors.toolbar_field_text_focus = tft.to_string();
+      
+      colors.toolbar_field_highlight = tft.shade_oklch("a(-15%)").to_string();
+      colors.toolbar_field_highlight_text = tft.min_contrast_oklch(tft, 7).to_string();
+      
+      let pp = panel.shade_oklch('l(-20%) a(-4%)');
+      let pphl = pp.shade_oklch('l(-80%)');
+      colors.popup = pp.to_string();
+      // colors.popup_text = text.min_contrast_oklch(pp, 5).to_string();
+      colors.popup_text = text.to_string();
+      colors.popup_border = pp.shade_oklch('l(+25%)').to_string();
+      colors.popup_highlight = pphl.to_string();
+      colors.popup_highlight_text = pphl.min_contrast_oklch(pphl, 5).to_string();
+      colors.focus_outline = panel.shade_oklch('l(+20%) a(0.9)').to_string();
+      
+      scheme.cached_theme = theme;
+      scheme.hash_theme = scheme.hash();
+      
+    }
     
     
     
     
-    // let hl = panel.shade_oklch(`h(${text.get_oklch().h})`);
-    // let hl = panel.blend(text, 0.1, 'oklch').shade_oklch(`l${panel.get_oklch().l}`);
+    let applyed = QScheme.#apply_theme(scheme.cached_theme);
     
-    // let img = QScheme.gen_gradient([
-    //   // panel.to_string(), panel.shade_oklch(`h(${text.get_oklch().h})`).to_string(), panel.to_string()
-    //
-    //   // panel.shade_oklch('a(0)').to_string(),
-    //   hl.to_string(),
-    //   panel.to_string(),
-    //   hl.to_string(),
-    //   panel.to_string(),
-    //   // panel.to_string(),
-    //
-    //   // 'red',
-    //   // 'red',
-    //   // 'blue',
-    //   // 'red',
-    //   // 'red'
-    // ], 1500, 1500, 45);
-    
-    // let img1 = QScheme.gen_gradient([
-    //   panel.to_string(),
-    //   // hl.to_string(),
-    //   // 'oklch(0.452 0.313 29.234)',
-    //   // 'oklch(0.452 0.313 264.052 / 0)',
-    //   panel.shade_oklch('a(0)').to_string(),
-    // ], 100, 300, 0);
-    // let img2 = QScheme.gen_gradient([
-    //   // hl.to_string(),
-    //   // 'oklch(0.452 0.313 264.052 / 0)',
-    //   panel.shade_oklch('a(0)').to_string(),
-    //   panel.to_string(),
-    //   // 'oklch(0.452 0.313 29.234)',
-    // ], 100, 300, 0);
-    // let img3 = QScheme.gen_gradient([
-    //   panel.to_string(),
-    //   hl.to_string(),
-    //   panel.to_string(),
-    //   hl.to_string(),
-    //   panel.to_string(),
-    //
-    //   // 'oklch(0.452 0.313 264.052 / 0)',
-    //   // 'oklch(0.452 0.313 29.234)',
-    //   // hl.to_string(),
-    //   // 'oklch(0.452 0.313 264.052 / 0)',
-    // ], 4000, 300, 0);
-    
-    // theme.colors.frame = panel.shade_oklch('a(0.1)').to_string('rgb');
-    // theme.colors.frame = 'rgba(53, 56, 63, 0.1)';
-    // theme.colors.frame_inactive = panel.shade_oklch('a(0.97)').to_string();
-    // theme.colors.frame_inactive = 'oklch(0.6 0.243 358.197 / 0.0)';
-    theme.images = {
-      // "additional_backgrounds": ["assets/blank.svg"],
-      // "theme_frame": "assets/icons/icon.png",
-      // "theme_frame": img,
-      // "theme_frame": "linear-gradient(to bottom, black, red)",
-      additional_backgrounds: [
-        // img,
-        // img1,
-        // img2,
-        // img3,
-        // "assets/icons/icon.png"
-      ]
-    };
-    // theme.images.additional_backgrounds = [
-    //   // QScheme.gen_color_wheel(panel.shade("l(+20%)").to_string()),
-    //   QScheme.gen_gradient([
-    //     'transparent', panel.shade_oklch('l(+50%)').to_string(), 'transparent'
-    //   ], 250, 80),
-    //   QScheme.gen_gradient([
-    //     'blue', 'green', 'purple', 'green', "blue"
-    //   ], 45, 30),
-    // ];
-    theme.properties.additional_backgrounds_alignment = [
-      // 'left bottom',
-      // 'right bottom' ,
-      'left bottom',
-    ];
-    theme.properties.additional_backgrounds_tiling = ['no-repeat'];
-    
-    
-    
-    
-    
-    // let icon_path = QScheme.gen_gradient([
-    //   text.shade("l(+20%)").to_string(),
-    //   text.to_string(),
-    //   text.shade("l(-20%)").to_string(),
-    // ], 45, 45);
-    //
-    // browser.sidebarAction.setIcon({
-    //   path: icon_path,
-    // });
-    //
-    // browser.browserAction.setIcon({
-    //   path: icon_path
-    // });
-    
-    // browser.browserAction.setBadgeText({text: `${panel.contrast_ratio(text)}`.slice(0, 4)});
-    
-    // let svg = fetch(browser.runtime.getURL('assets/icons/icon2.svg')).then(async resp => {
-    //   let garbage = await resp.text().then(text => text);
-    //   let parser = new DOMParser();
-    //   let doc = parser.parseFromString(garbage, 'image/svg+xml');
-    //   let lixo = doc.querySelector('#dynamic-secondary');
-    //   let qq = doc.querySelector('#base');
-    //   lixo.setAttribute('fill', panel.to_string());
-    //   qq.setAttribute('fill', icon_color.to_string());
-    //   qq.setAttribute('stroke', icon_color.to_string());
-    //   // lixo.children.item(1).setAttribute('stop-color', this.panel.to_string());
-    //
-    //   const serializer = new XMLSerializer();
-    //   const svg_string = serializer.serializeToString(doc);
-    //   const svg_blob = new Blob([svg_string], {type: 'image/svg+xml'});
-    //   const svg_url = URL.createObjectURL(svg_blob);
-    //
-    //   browser.browserAction.setIcon({
-    //     path: svg_url,
-    //   });
-    //   browser.sidebarAction.setIcon({
-    //     path: svg_url,
-    //   })
-    //
-    //   console.info('SVG Loaded', svg_url);
-    // });
-    
-    let apply = new Promise((resolve, reject) => {
-      browser.browserSettings.overrideContentColorScheme
-      .set({value: scheme.theme_mode})
-      .then(value => {
-        // console.info(`Setting was modified: ${value}`);
-      });
-      browser.theme.update(theme);
-      resolve();
-    });
     
     return scheme;
+  }
+  
+  static #apply_theme(theme) {
+    browser.browserSettings.overrideContentColorScheme
+      .set({value: theme.properties.color_scheme})
+      .catch(reason => console.error('Failed to set overrideContentColorScheme:', reason));
+    
+    return new Promise((resolve, reject) => {
+      try {
+        browser.theme.update(theme);
+        resolve(theme);
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
   
   

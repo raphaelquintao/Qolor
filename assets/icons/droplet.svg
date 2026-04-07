@@ -1,44 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 -20 384 568"
-     style="color: var(--primary, #f5446e)"
      width="250" height="250"
-
+     style="color: var(--primary, #f5446e)"
+     preserveAspectRatio="xMidYMid meet"
+     shape-rendering="geometricPrecision"
 >
-
   <style>
-    .lixo {
-    --p1: var(--primary, red);
-    --p2: oklch(from var(--primary) calc(l - 0.15) c h);
+    .colors {
+      --p1: var(--primary, red);
+      --p2: oklch(from var(--p1) calc(l - 0.15) c h);
 
-    --s1: var(--secondary, green);
-    --s2: oklch(from var(--secondary) calc(l - 0.15) c h);
+      --s1: var(--secondary, green);
+      --s2: oklch(from var(--s1) calc(l - 0.15) c h);
 
-    --t1: var(--tertiary, blue);
-    --t2: oklch(from var(--tertiary) calc(l - 0.15) c h);
+      --t1: var(--tertiary, blue);
+      --t2: oklch(from var(--t1) calc(l - 0.15) c h);
     }
   </style>
 
   <defs>
-    <radialGradient id="lixo" class="lixo" cx="50%" cy="50%" r="80%">
+    <radialGradient id="grad_p" class="colors" cx="50%" cy="50%" r="80%">
       <stop offset="0%" stop-color="var(--p1)" stop-opacity="1"/>
       <stop offset="100%" stop-color="var(--p2)" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="lixo2" class="lixo" cx="50%" cy="50%" r="80%">
+    <radialGradient id="grad_s" class="colors" cx="50%" cy="50%" r="80%">
       <stop offset="0%" stop-color="var(--s1)" stop-opacity="1"/>
       <stop offset="100%" stop-color="var(--s2)" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="lixo3" class="lixo" cx="50%" cy="50%" r="80%">
+    <radialGradient id="grad_t" class="colors" cx="50%" cy="50%" r="80%">
       <stop offset="0%" stop-color="var(--t1)" stop-opacity="1"/>
       <stop offset="100%" stop-color="var(--t2)" stop-opacity="1"/>
     </radialGradient>
   </defs>
 
   <g transform="translate(0, 16)">
-
-    <path opacity="1" fill="url(#lixo)"
+    <path opacity="1" fill="url(#grad_p)"
           d="M0 320c0-91.2 130.2-274.1 166.6-323.5 5.9-8 15.2-12.5 25.2-12.5l.4 0c10 0 19.3 4.5 25.2 12.5 36.4 49.4 166.6 232.3 166.6 323.5 0 106-86 192-192 192S0 426 0 320zm64-8c0 75.1 60.9 136 136 136 13.3 0 24-10.7 24-24s-10.7-24-24-24c-48.6 0-88-39.4-88-88 0-13.3-10.7-24-24-24s-24 10.7-24 24z"/>
 
-    <path fill="url(#lixo)" d="M88 288c13.3 0 24 10.7 24 24 0 48.6 39.4 88 88 88 13.3 0 24 10.7 24 24s-10.7 24-24 24c-75.1 0-136-60.9-136-136 0-13.3 10.7-24 24-24z" opacity="0.4"/>
+    <path fill="url(#grad_p)" opacity="0.4"
+          d="M88 288c13.3 0 24 10.7 24 24 0 48.6 39.4 88 88 88 13.3 0 24 10.7 24 24s-10.7 24-24 24c-75.1 0-136-60.9-136-136 0-13.3 10.7-24 24-24z"/>
 
   </g>
 

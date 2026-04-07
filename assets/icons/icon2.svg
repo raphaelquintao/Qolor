@@ -1,73 +1,59 @@
 <svg xmlns="http://www.w3.org/2000/svg"
-     width="48" height="48" viewBox="0 0 470 470"
-     style="--ring: #f45777; --leg: #57cef6"
+     width="30" height="30" viewBox="0 0 440 440"
 >
   <defs>
 
-    <linearGradient id="ring-gradient"
-                    x1="0" y1="0" x2="1" y2="1"
-                    color-interpolation="auto"
-    >
+    <linearGradient id="ring-gradient" x1="0" y1="0" x2="1" y2="1"
+                    color-interpolation="auto">
 
       <stop offset="0%" stop-color="#f45777"/>
       <stop offset="100%" stop-color="#F12750"/>
 
     </linearGradient>
 
-        <radialGradient id="radial-gradient"  color-interpolation="linearRGB"
-                        cx="50%" cy="50%" r="50%">
 
-          <stop offset="00%"  stop-color="oklch(0.005 0.167 15)"/>
-          <stop offset="70%"  stop-color="oklch(0.005 0.167 15)"/>
-          <stop offset="95%"  stop-color="oklch(0.805 0.167 15)"/>
-          <stop offset="100%" stop-color="oklch(0.105 0.167 15)"/>
-        </radialGradient>
-
-
-    <linearGradient id="leg-gradient" x1="0" y1="0" x2="1" y2="1" color-interpolation="auto">
+    <linearGradient id="leg-gradient" x1="0" y1="0" x2="1" y2="1"
+                    color-interpolation="auto">
       <stop offset="0%" stop-color="#57cef6"/>
       <stop offset="100%" stop-color="#0EB9F2"/>
     </linearGradient>
 
 
-    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
-      <feDropShadow dx="1" dy="1" stdDeviation="4"
-                    flood-color="black"
-                    flood-opacity="1"/>
-    </filter>
-
-    <filter id="innershadow">
-      <feOffset dx='0' dy='0'/>
-      <feGaussianBlur stdDeviation='10' result='blur'/>
-      <feComposite operator='out' in='SourceGraphic' in2='blur' result='inverse'/>
-      <feFlood flood-color='black' flood-opacity='0.9' result='color'/>
-      <feComposite operator='in' in='color' in2='inverse' result='shadow'/>
-      <feComposite operator='over' in='shadow' in2='SourceGraphic'/>
-    </filter>
+<!--    <filter id="shadow">-->
+<!--      <feDropShadow dx="1" dy="1" stdDeviation="4"-->
+<!--                    flood-color="black"-->
+<!--                    flood-opacity="1"/>-->
+<!--    </filter>-->
 
 
     <mask id="mask">
-      <rect x="0" y="0" width="100%" height="100%" fill="white"/>
-      <circle cx="50%" cy="50%" r="135" fill="black"/>
+      <circle class="outer" cx="50%" cy="50%" r="100%" fill="white"/>
+      <circle class="inner" cx="50%" cy="50%" r="120" fill="black"/>
     </mask>
+
   </defs>
 
-  <g filter="url(#shadow)" id="ring-group">
+  <circle id="ring" stroke="black" stroke-width="0"
+          vector-effect="non-scaling-stroke"
+          cx="50%" cy="50%" r="220"
+          fill="url(#ring-gradient)"
 
-    <g overflow="visible">
-      <circle cx="50%" cy="50%" r="220" fill="url(#ring-gradient)" mask="url(#mask)" id="ring"/>
-    </g>
-  </g>
+  />
 
-  <g filter="url(#shadow)">
-    <g transform="rotate(-45 235 235)" overflow="visible">
-      <rect x="235" y="235"
-            width="80" height="230"
-            rx="40" ry="40"
-            fill="url(#leg-gradient)"
-            style="transform-origin: 50% 50%; transform:  translate(-40px, 65px)"
-      />
-    </g>
+  <!--  <g filter="url(#shadow)" id="ring-group">-->
+
+  <!--  </g>-->
+
+
+  <!--  <g filter="url(#shadow)">-->
+  <g transform="rotate(-45 440 440)" >
+    <rect x="440" y="440"
+          width="90" height="200"
+          rx="0" ry="0"
+          fill="url(#leg-gradient)"
+          transform="translate(-45 -245) "
+    />
   </g>
+  <!--  </g>-->
 
 </svg>

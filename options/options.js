@@ -1,4 +1,5 @@
 import { QColor } from '../src/core/q_color.js';
+import { register_q_svg } from '../src/core/q_html_elements.js';
 import { QPicker } from '../src/core/q_picker.js';
 import { QCollection, UUID } from "../src/core/q_utils.js";
 
@@ -50,8 +51,8 @@ const scheme_selector = document.querySelector('#scheme-selector');
 const scheme_info = document.querySelector('.scheme-section .info');
 const scheme_container = document.querySelector('#scheme-selector .scheme-container');
 const header_actions = document.querySelector('#main-header .actions');
-const header_title = document.querySelector('#main-header .main-title');
-const header_logo = document.querySelector('#main-header .main-logo');
+const header_logo_container = document.querySelector('#main-header .logo-container');
+const header_title = document.querySelector('#main-header .title');
 const output_selector = document.querySelector('#output-selector');
 
 header_title.innerText = browser.runtime.getManifest().short_name.slice(1);
@@ -59,10 +60,10 @@ document.title = browser.runtime.getManifest().short_name + `- ${VIEW.charAt(0).
 
 // -- Create Options Checkboxes
 const options = {
-  show_output:       UI.create_checkbox('Show Output/Input', false, {className: 'checkbox-switch'}),
-  show_slider_value: UI.create_checkbox('Show Slider Value', false, {className: 'checkbox-switch'}),
-  show_slider_label: UI.create_checkbox('Show Slider Label', false, {className: 'checkbox-switch'}),
-  
+  show_output:        UI.create_checkbox('Show Output/Input', false, {className: 'checkbox-switch'}),
+  show_slider_value:  UI.create_checkbox('Show Slider Value', false, {className: 'checkbox-switch'}),
+  show_slider_label:  UI.create_checkbox('Show Slider Label', false, {className: 'checkbox-switch'}),
+  apply_colors_popup: UI.create_checkbox('Apply Colors to Popup', false, {className: 'checkbox-switch'}),
 };
 for (let key in options) prefs_container.append(options[key].parentElement);
 
@@ -86,16 +87,21 @@ for (let mode of QPicker.OUTPUT_MODES) {
 // -- Create Header Action Buttons
 const btn_open_sidebar = UI.create_button('<i class="fa-solid fa-right-to-bracket fa-flip-horizontal"></i>', {title: 'Toggle Sidebar'});
 const btn_open_popout = UI.create_button('<i class="fa-solid fa-up-right-from-square"></i>', {title: 'Open Popout'});
+const btn_restore_popout = UI.create_button('<i class="fa-regular fa-window-restore"></i>', {title: 'Restore Popout Position'});
 if (VIEW === 'popout') {
-  // header_actions.append(btn_open_sidebar);
+  header_actions.prepend(btn_restore_popout);
 } else if (VIEW === 'sidebar') {
   header_actions.prepend(btn_open_popout);
 } else {
   header_actions.prepend(btn_open_sidebar, btn_open_popout);
 }
+btn_restore_popout.addEventListener('click', ev => {
+  ev.preventDefault();
+  browser.runtime.sendMessage({key: 'restore_popout'});
+});
+
 btn_open_popout.addEventListener('click', ev => {
   ev.preventDefault();
-  console.log('Open Popout Clicked');
   browser.runtime.sendMessage({key: 'open_popout'});
 });
 
@@ -134,12 +140,12 @@ btn_reload.addEventListener('click', ev => {
 
 
 btn_surprise.addEventListener('click', ev => {
-  browser.runtime.getBackgroundPage().then(win => {
-    let data_loaded = win.data.loaded;
+  get_updated_data().then(data => {
+    let data_loaded = data.loaded;
     let scheme = data_loaded.get_selected();
     
     scheme.randomize();
-    scheme.update_secondary();
+    scheme.compute_colors();
     
     
     scheme.apply();
@@ -172,12 +178,13 @@ panel_picker.addEventListener('colorchange', evt => {
   /** @type {QColor} */
   let color = evt.color.clone();
   
-  browser.runtime.getBackgroundPage().then(win => {
-    let data_loaded = win.data.loaded;
+  get_updated_data().then(data => {
+    console.info('Got data response from background page:', data);
+    let data_loaded = data.loaded;
     let scheme = data_loaded.get_selected();
     scheme.panel = color;
     
-    scheme.update_secondary();
+    scheme.compute_colors();
     
     scheme.apply();
     
@@ -195,11 +202,11 @@ text_picker.addEventListener('colorchange', evt => {
   /** @type {QColor} */
   let color = evt.color.clone();
   
-  browser.runtime.getBackgroundPage().then(win => {
-    let data_loaded = win.data.loaded;
+  get_updated_data().then(data => {
+    let data_loaded = data.loaded;
     let scheme = data_loaded.get_selected();
     scheme.text = color;
-    scheme.update_secondary();
+    scheme.compute_colors();
     
     scheme.apply();
     
@@ -374,13 +381,14 @@ function create_scheme_card(scheme, selected = false) {
 }
 
 
-/** @param {{synced: QCollection, loaded: QCollection}} data
+/**
+ * @param {{synced: QCollection, loaded: QCollection}} data
  * @param {string} origin
  * @param {string[]} ignore
  */
 function update_ui(data, origin = 'bg', ignore = []) {
   const is_origin = (origin === MY_ID);
-  console.log('Updating UI', {origin, ignore, is_origin});
+  // console.log('Updating UI', {origin, ignore, is_origin});
   
   const loaded = data.loaded;
   
@@ -399,6 +407,14 @@ function update_ui(data, origin = 'bg', ignore = []) {
   
   scheme_info.innerHTML = `<small>(${loaded._schemes.length})</small>`;
   
+  // header_logo_container.style.setProperty('--primary', selected_scheme.cached[1].to_string());
+  // header_logo_container.style.setProperty('--secondary', selected_scheme.cached[4].to_string());
+  // header_logo_container.style.setProperty('--tertiary', selected_scheme.cached[5].to_string());
+  
+  // header_logo_container.querySelectorAll('q-svg').forEach(el => {
+  //   el.setAttribute('data-class', `gen-${selected_scheme.gen_mode}`);
+  // });
+  
   let scheme_cards = scheme_container.querySelectorAll('.scheme-card');
   if (scheme_cards.length !== loaded.schemes.length) {
     if (scheme_cards.length === 0) scheme_container.innerHTML = '';
@@ -411,12 +427,11 @@ function update_ui(data, origin = 'bg', ignore = []) {
   }
   scheme_cards = scheme_container.querySelectorAll('.scheme-card');
   
-  
   for (let card of scheme_cards) {
     let scheme = loaded.find_by_id(card.id);
     if (scheme) {
-      if (!scheme.cached || scheme.cached.length < 4) {
-        scheme.update_secondary();
+      if (!scheme.cached || scheme.cached.length < 6) {
+        scheme.compute_colors();
       }
       
       card.style.setProperty('--bg', scheme.cached[0].to_string());
@@ -435,6 +450,8 @@ function update_ui(data, origin = 'bg', ignore = []) {
       qsvg.style.setProperty('--tertiary', scheme.cached[5].to_string());
       qsvg.setAttribute('width', '2.5em');
       qsvg.setAttribute('height', '2.5em');
+      
+      
       
       if (scheme.gen_mode === 'normal') {
         gen_mode.dataset.title += ' Single Tone';
@@ -459,7 +476,7 @@ function update_ui(data, origin = 'bg', ignore = []) {
         sync.dataset.title = 'Scheme is Synced Across Devices';
         sync.innerHTML = ' <i class="fa-solid fa-cloud"></i>';
       } else if (found) {
-        sync.dataset.title = 'Scheme is Different from Synced (Click to Restore)';
+        sync.dataset.title = 'Scheme has Local Changes (Click to Restore)';
         sync.innerHTML = '<i class="fa-solid fa-download"></i>';
         sync.style.cursor = 'pointer';
       } else {
@@ -546,6 +563,10 @@ function update_ui(data, origin = 'bg', ignore = []) {
   text_picker.show_slider_value = panel_picker.show_slider_value = loaded.options.show_slider_value;
   text_picker.show_slider_label = panel_picker.show_slider_label = loaded.options.show_slider_label;
   
+  browser.theme.getCurrent().then(theme => {
+    set_theme_colors(theme);
+  });
+  
   panel_picker.disabled = text_picker.disabled = !selected_scheme.editable;
   btn_surprise.disabled = !selected_scheme.editable;
   opt_lock.disabled = selected_scheme.default;
@@ -585,18 +606,20 @@ function update_ui(data, origin = 'bg', ignore = []) {
 browser.runtime.onMessage.addListener((message, sender, send_response) => {
   if (!message['to'] || message['to'] !== 'front') return;
   
-  console.log('onMessage OPTIONS', message, MY_ID);
+  // console.log('onMessage OPTIONS', message, MY_ID);
   
   if (message.key === 'refresh') {
-    const bg = browser.runtime.getBackgroundPage();
-    bg.then(win => {
-      let data = win.get_data();
+    get_updated_data().then(data => {
       try {
         update_ui(data, message.origin, message.ignore);
       } catch (err) {
-        console.error('Failed to update UI', err, data_loaded);
+        console.error('Failed to update UI', err, data);
       }
     });
+  }
+  
+  if (message.key === 'resize') {
+    resize();
   }
   
 });
@@ -612,8 +635,13 @@ function set_theme_colors(theme) {
       // document.body.parentElement.style.setProperty('--q-base', theme.colors.sidebar);
       // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.sidebar_text);
     } else if (view === 'popup') {
-      document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
-      document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
+      if (options.apply_colors_popup.checked) {
+        document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
+        document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
+      } else {
+        document.body.parentElement.style.removeProperty('--q-base');
+        document.body.parentElement.style.removeProperty('--q-fg-color');
+      }
     } else {
       // document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
       // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
@@ -622,14 +650,12 @@ function set_theme_colors(theme) {
 }
 
 browser.theme.onUpdated.addListener((info) => {
-  console.log('Theme updated', info);
   if (info.theme.colors) {
     set_theme_colors(info.theme);
   }
 });
 
 browser.theme.getCurrent().then(theme => {
-  console.log('Current theme', theme);
   set_theme_colors(theme);
 });
 
@@ -637,13 +663,39 @@ browser.theme.getCurrent().then(theme => {
 
 
 // -- Initialize UI
-const bg = browser.runtime.getBackgroundPage();
-bg.then(win => {
-  console.log('curr_id', MY_ID, win);
-  
-  let data = win.get_data();
+function get_updated_data() {
+  return new Promise((resolve, reject) => {
+    const bg = browser.runtime.getBackgroundPage();
+    bg.then(win => {
+      if (win) {
+        resolve(win.get_data());
+      } else {
+        browser.runtime.sendMessage({key: 'get_data', origin: MY_ID}).then(response => {
+          
+          if (response && response.loaded && response.synced) {
+            resolve({
+              loaded: QCollection.unserialize(response.loaded),
+              synced: QCollection.unserialize(response.synced)
+            });
+          } else {
+            reject('Invalid data response');
+          }
+        }).catch(err => {
+          reject('Failed to get data from background page: ' + err);
+        });
+      }
+    }).catch(err => {
+      reject('Failed to get background page: ' + err);
+    });
+  });
+}
+
+
+/**
+ * @param {{synced: QCollection, loaded: QCollection}} data
+ */
+function init(data) {
   let data_loaded = data.loaded;
-  
   
   text_picker.picker_mode = panel_picker.picker_mode = data_loaded.options.color_wheel ? 'hsl' : 'hsv';
   panel_picker.show_output = text_picker.show_output = data_loaded.options.show_output;
@@ -678,7 +730,7 @@ bg.then(win => {
       if (radio.checked) {
         data_loaded.get_selected().theme_mode = radio.value;
         data_loaded.get_selected().page_mode = radio.value;
-        data_loaded.get_selected().update_secondary();
+        data_loaded.get_selected().compute_colors();
         data_loaded.get_selected().apply();
         browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
       }
@@ -689,7 +741,7 @@ bg.then(win => {
     radio.addEventListener('change', ev => {
       if (radio.checked) {
         data_loaded.get_selected().gen_mode = radio.value;
-        data_loaded.get_selected().update_secondary();
+        data_loaded.get_selected().compute_colors();
         data_loaded.get_selected().apply();
         browser.runtime.sendMessage({key: 'update_options', origin: MY_ID});
       }
@@ -708,59 +760,42 @@ bg.then(win => {
   
   update_ui(data, MY_ID);
   
+  document.addEventListener('DOMContentLoaded', () => {
+    resize(true);
+  });
   
+}
+
+function resize(loop = true) {
+  if (VIEW === 'popout') {
+    browser.windows.getCurrent().then(win => {
+      if (win) {
+        let offset = win.height - window.innerHeight;
+        const html = document.documentElement;
+        const width = html.scrollWidth;
+        let height = html.offsetHeight + offset;
+        
+        // console.log('POPOUT', width, html.scrollHeight, html.scrollTopMax, html.offsetHeight, html.clientHeight, html, win.height, window.innerHeight);
+        
+        browser.windows.update(win.id, {height}).then(() => {
+          if (loop) {
+            setTimeout(() => {
+              resize(false);
+            }, 50);
+          }
+        });
+      }
+    });
+  }
+}
+
+get_updated_data().then(data => {
+  init(data);
 });
 
 
 
-
-
-class QSVG extends HTMLElement {
-  
-  static CACHE = {};
-  
-  static get observedAttributes() {
-    return ['src'];
-  }
-  
-  attributeChangedCallback(name, old_value, new_value) {
-    if (name === 'src' && old_value !== new_value) {
-      this.load_svg(new_value);
-    }
-  }
-  
-  async load_svg(src) {
-    if (!src) return;
-    if (!this.shadowRoot) this.attachShadow({mode: 'open'});
-    
-    if (QSVG.CACHE[src]) {
-      this.shadowRoot.innerHTML = QSVG.CACHE[src];
-    } else {
-      const svg_text = await (await fetch(src)).text();
-      this.shadowRoot.innerHTML = svg_text;
-      QSVG.CACHE[src] = svg_text;
-    }
-    
-    
-    const w = this.getAttribute('width');
-    const h = this.getAttribute('height');
-    
-    const svg = this.shadowRoot.querySelector('svg');
-    if (svg) {
-      if (w) svg.setAttribute('width', w);
-      if (h) svg.setAttribute('height', h);
-      svg.style.display = 'block';
-    }
-  }
-  
-  connectedCallback() {
-    const src = this.getAttribute('src');
-    this.load_svg(src);
-  }
-  
-}
-
-customElements.define('q-svg', QSVG);
+register_q_svg();
 
 
 

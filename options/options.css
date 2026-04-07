@@ -35,7 +35,7 @@ body, .overlay {
 
 :root[data-view="popup"] {
   scrollbar-width: none !important;
-  margin: 0;
+  margin: 0px;
   padding: 0;
 
   body {
@@ -58,6 +58,12 @@ body, .overlay {
     max-width: 500px;
     margin: auto;
   }
+
+  height: fit-content !important;
+
+  body {
+    height: fit-content !important;
+  }
 }
 
 
@@ -79,50 +85,44 @@ body, .overlay {
 #main-header {
   display: grid;
   align-items: center;
-  padding: 0.8rem;
-  padding-bottom: 0.5rem;
   gap: 0.5rem;
   grid-template-columns: auto max-content;
+  padding: 0.5em;
 
 
-
-  .left {
+  .logo-container {
     filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.9));
     display: flex;
     align-items: baseline;
     gap: 0.1rem;
 
-    color: var(--q-accent-color);
+    background-image: linear-gradient(-45deg,
+    currentColor,
+    currentColor) !important;
+    background-size: cover;
+    background-clip: text;
 
-    /*background-clip: text;*/
-
-    svg {
-      width: 2.7rem;
-      height: 2.7rem;
-      --ring: currentColor !important;
-
-      #ring-group {
-        filter: none;
-        /*opacity: 0;*/
-      }
-
+    .logo {
+      font-size: 3rem;
     }
+
+    .title {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin: 0;
+      padding: 0;
+      color: transparent;
+      line-height: 1;
+    }
+
+
+
   }
+
+
 }
 
-.main-title {
-  font-size: 2.5rem;
-  font-weight: bold;
-  margin: 0;
-  padding: 0;
-  /*background: inherit;*/
-  color: transparent;
-  background: linear-gradient(35deg, oklch(from var(--q-accent-color) calc(1) c h), oklch(from var(--q-accent-color) l c h));
-  background-size: 600% 600%;
-  background-clip: text;
-  animation: gradient 15s ease infinite;
-  line-height: 1;
-}
+
 
 #main-footer {
 }
@@ -166,6 +166,9 @@ body, .overlay {
   cursor: pointer;
   transition: background 200ms ease, box-shadow 200ms ease;
   /*padding-bottom: 0;*/
+  position: absolute;
+  left: 0.5rem;
+  z-index: 100;
 
   label {
     font-size: 0.9rem;
@@ -178,6 +181,7 @@ body, .overlay {
   header {
     /*margin-bottom: 0.5rem;*/
     padding: 0.5rem;
+    align-self: baseline;
   }
 
   .prefs-container {
@@ -200,9 +204,12 @@ body, .overlay {
       /*background: red;*/
       padding: 0.15em 0;
 
+      &:first-child {
+        margin-top: 0.5rem;
+      }
+
       &:last-child {
         margin-bottom: 0.5rem;
-
       }
     }
   }
@@ -227,7 +234,25 @@ body, .overlay {
 
   &[data-collapsed="false"] {
     /*background: oklch(from var(--q-input-bg-color) calc(l * 0.55) c h / 1);*/
-    /*box-shadow: var(--q-hl-in-shadow);*/
+
+    filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.95));
+
+    > * {
+      background: oklch(from var(--q-input-bg-color) calc(l * 0.65) c h / 1);
+      border: 1px solid oklch(from currentColor calc(l * 0.65) c h / 0.8);
+    }
+
+    header {
+      border-top-right-radius: var(--q-border-radius);
+      border-top-left-radius: var(--q-border-radius);
+      border-bottom: 0;
+      margin-bottom: -1px;
+    }
+
+    .prefs-container {
+      border-bottom-right-radius: var(--q-border-radius);
+      border-bottom-left-radius: var(--q-border-radius);
+    }
 
     .collapse {
       max-height: 300px;
@@ -239,6 +264,7 @@ body, .overlay {
     }
   }
 }
+
 
 .scheme-section {
   /*background: var(--q-input-bg-color);*/
@@ -592,7 +618,8 @@ body, .overlay {
   background-position: 40% 50%;
 }
 
-.surprise-button:active {
-  /*transform: scale(0.98);*/
-  /*box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);*/
+.button-toolbar {
+  q-svg {
+    filter: drop-shadow(1px 1px 0px oklch(from black l c h / 80%))
+  }
 }

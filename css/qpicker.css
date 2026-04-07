@@ -73,8 +73,8 @@
   align-self: center;
   box-sizing: border-box;
   width: 100%;
+  height: var(--qp-area-size);
   max-height: var(--qp-area-size);
-  height: auto;
   margin: 0;
   cursor: crosshair;
   transition: none;
@@ -84,7 +84,6 @@
   box-shadow: none;
   border-radius: var(--qp-border-radius, var(--q-border-radius));
   padding: 1px;
-  aspect-ratio: 1.4;
 
 
 
@@ -360,7 +359,7 @@
 
   .qp-output-value {
     /*letter-spacing: -0.05em;*/
-    font-size: 0.875em;
+    font-size: 0.9em;
     /*line-height: 1.2;*/
     overflow: hidden;
     align-self: center;
@@ -369,6 +368,7 @@
     /*padding: 0.2em 0.17em !important;*/
     text-align: center;
     text-overflow: ellipsis;
+    font-weight: 500;
 
     &[data-invalid="true"] {
       border-bottom-color: hsl(0 100% 50% / 50%);

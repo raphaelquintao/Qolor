@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Qolor</title>
-  <link href="../assets/icons/icon2.svg" rel="icon" type="image/x-icon"/>
+  <link href="../assets/icons/icon3.svg" rel="icon" type="image/x-icon"/>
   <link rel="stylesheet" href="options.css">
   <script src="options.js" type="module"></script>
 
@@ -15,12 +15,12 @@
 <div class="content">
 
   <header id="main-header">
-    <div class="left" id="#main-logo-container">
-      <span class="main-logo">
-        <q-svg src="../assets/icons/icon2.svg"></q-svg>
-      </span>
-      <span class="main-title">...</span>
+    <div class="left logo-container">
+      <q-svg class="logo" src="../assets/icons/icon.svg" width="1em" height="1em"></q-svg>
+
+      <span class="title">Qolor</span>
     </div>
+
     <div class="actions flex gap-0-5rem align-items-center">
       <button id="btn-reload" style="display: none">Reload</button>
       <button id="btn-sync" title="Save all on Cloud">
@@ -34,7 +34,17 @@
   </header>
   <hr/>
 
+
   <section class="section flex flex-row flex-wrap full-width gap-0-3rem justify-content-center global-options">
+
+    <div class="flex flex-col  prefs-section" data-collapsed="true" style="display: none">
+      <header>
+        <span class="title"><i class="fas fa-gear"></i></span>
+        <span class="indicator"><i class="fas fa-chevron-down"></i></span>
+      </header>
+      <div class="flex flex-col collapse prefs-container"></div>
+    </div>
+
     <div class="button-toolbar">
       <label title="Color Wheel">
         <input class="btn btn-icon" type="checkbox" id="opt-color-wheel">
@@ -55,10 +65,8 @@
     </header>
 
     <div id="scheme-selector" class="scheme-selector">
-      <div class="overlay left"></div>
-      <div class="overlay right"></div>
       <div class="scheme-container">
-        <div class="loading">Loading...</div>
+        <div class="loading scheme-card">Loading...</div>
       </div>
     </div>
 
@@ -112,13 +120,12 @@
         <input class="btn" type="radio" name="opt-gen-mode" value="dual">
         <q-svg src="../assets/icons/dual.svg"
                width="1.35em" height="1.35em"
-               style="--primary: red; --secondary: oklch(0.78014629 0.17800827 318.81383594); --tertiary: oklch(0.75286075 0.09835012 228.81405772)">
-        </q-svg>
+               style="--primary: red; --secondary: oklch(0.78014629 0.17800827 318.81383594); --tertiary: oklch(0.75286075 0.09835012 228.81405772)"
+        ></q-svg>
+
 
       </label>
     </div>
-
-    <pre class="info" id="info"></pre>
 
   </section>
 
@@ -128,15 +135,6 @@
 
   <hr/>
 
-  <section class="section flex flex-col full-width gap-0 prefs-section" data-collapsed="true" style="display: none">
-    <header class="section-header">
-      <span class="title">Advanced</span>
-      <span class="on-right"></span>
-      <span class="indicator"><i class="fas fa-chevron-down"></i></span>
-    </header>
-
-    <div class="flex flex-col collapse prefs-container"></div>
-  </section>
 
   <!--  <hr/>-->
 
@@ -145,8 +143,6 @@
       <button id="btn-surprise" class="surprise-button" title="Generate a random scheme">
         <i class="fas fa-shuffle"></i> Surprise Me!
       </button>
-      <!--      <span class="on-right"></span>-->
-
     </section>
   </footer>
 

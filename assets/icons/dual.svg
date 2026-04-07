@@ -1,41 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 200 200"
      width="250" height="250"
+     preserveAspectRatio="xMidYMid meet"
+     shape-rendering="geometricPrecision"
 >
-
   <style>
-    .lixo {
-    --p1: var(--primary, red);
-    --p2: oklch(from var(--primary) calc(l - 0.15) c h);
+    .colors {
+      --p1: var(--primary, red);
+      --p2: oklch(from var(--p1) calc(l - 0.15) c h);
 
-    --s1: var(--secondary, green);
-    --s2: oklch(from var(--secondary) calc(l - 0.15) c h);
+      --s1: var(--secondary, green);
+      --s2: oklch(from var(--s1) calc(l - 0.15) c h);
 
-    --t1: var(--tertiary, blue);
-    --t2: oklch(from var(--tertiary) calc(l - 0.15) c h);
+      --t1: var(--tertiary, blue);
+      --t2: oklch(from var(--t1) calc(l - 0.15) c h);
     }
   </style>
 
   <defs>
-    <radialGradient id="lixo" class="lixo" cx="50%" cy="50%" r="80%">
+    <radialGradient id="grad_p" class="colors" cx="50%" cy="50%" r="80%">
       <stop offset="0%" stop-color="var(--p1)" stop-opacity="1"/>
       <stop offset="100%" stop-color="var(--p2)" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="lixo2" class="lixo" cx="50%" cy="50%" r="80%">
+    <radialGradient id="grad_s" class="colors" cx="50%" cy="50%" r="80%">
       <stop offset="0%" stop-color="var(--s1)" stop-opacity="1"/>
       <stop offset="100%" stop-color="var(--s2)" stop-opacity="1"/>
     </radialGradient>
-    <radialGradient id="lixo3" class="lixo" cx="50%" cy="50%" r="80%">
+    <radialGradient id="grad_t" class="colors" cx="50%" cy="50%" r="80%">
       <stop offset="0%" stop-color="var(--t1)" stop-opacity="1"/>
       <stop offset="100%" stop-color="var(--t2)" stop-opacity="1"/>
     </radialGradient>
   </defs>
 
   <g transform="translate(0,-5)">
-    <path fill="url(#lixo2)" stroke="black" stroke-width="0" transform="translate(-4, 0) scale(1, 1.03)"
+    <path fill="url(#grad_s)" stroke="black" stroke-width="0" transform="translate(-4, 0) scale(1, 1.03)"
           d="M96.784 187.322a84.766 88.24 0 0 1 0-176.48 45.506 47.371 0 0 0 0 94.742 39.26 40.87 0 0 1 0 81.738"/>
 
-    <path fill="url(#lixo3)" stroke="black" stroke-width="0" transform="translate(2, 0) scale(1, 1.03) "
+    <path fill="url(#grad_t)" stroke="black" stroke-width="0" transform="translate(2, 0) scale(1, 1.03) "
           d="M106.539 14.876a84.77 87.918 0 0 1 0 175.836 45.508 47.198 0 0 0 0-94.396 39.262 40.72 0 0 1 0-81.44"/>
   </g>
 

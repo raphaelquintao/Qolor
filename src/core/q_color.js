@@ -2,12 +2,30 @@ export class QColor {
   #regex = {
     hsl: /^\s*(hsla?)\(\s*((?:3[0-5][0-9]|[0-2]?[0-9]{1,2})(?:\.\d*)?|\.\d+|360(?:\.0*)?)(deg)?\s*(\s*,\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?\s*(\s*,\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?\s*((\s*[,\/]\s*|\s+)\s*([0-9]{1,2}(?:\.\d*)?|\.\d+|100(?:\.0*)?)(%)?)?\s*\)\s*$/i
   };
-
+  
   /** @type {{[key:string]: {parse: function(string), to_string: function(QColor, number, boolean)}}} */
   static modes = {
     hsl:   {
       parse:     (str) => {
-      
+        const regex = /hsla?\((\d*\.\d+|\d+)(?:deg)?\s*[\s,]\s*(\d*\.\d+|\d+)%?\s*[\s,]\s*(\d*\.\d+|\d+)%?\s*(?:[\/,]\s*(\d*\.\d+|\d+)(%?)\s*)?\)/ig;
+        let matches = regex.exec(str);
+        if (!matches) return false;
+        
+        let h = parseFloat(matches[1]);
+        let s = parseFloat(matches[2]);
+        let l = parseFloat(matches[3]);
+        let a = parseFloat(matches[4] || 1);
+        let a_is_percent = matches[5] === '%';
+        
+        if (h < 0 || h > 360 || l < 0 || l > 100 || s < 0 || s > 100) return false;
+        
+        
+        let color = new QColor();
+        color.hsla = {h, s, l, a: a_is_percent ? a / 100 : a};
+        return {
+          mode:  'hsl',
+          color: color
+        };
       },
       to_string: (color, precision, force_alpha = false) => {
         const parts = [
@@ -21,7 +39,24 @@ export class QColor {
       }
     },
     rgb:   {
-      parse:     (str) => {},
+      parse:     (str) => {
+        const regex = /rgba?\((\d*\.\d+|\d+)\s*[\s,]\s*(\d*\.\d+|\d+)\s*[\s,]\s*(\d*\.\d+|\d+)\s*(?:[\/,]\s*(\d*\.\d+|\d+)(%?)\s*)?\)/ig;
+        let matches = regex.exec(str);
+        if (!matches) return false;
+        
+        let r = parseFloat(matches[1]);
+        let g = parseFloat(matches[2]);
+        let b = parseFloat(matches[3]);
+        let a = parseFloat(matches[4] || 1);
+        let a_is_percent = matches[5] === '%';
+        
+        if (r < 0 || g < 0 || b < 0 || r > 255 || g > 255 || b > 255) return false;
+        
+        return {
+          mode:  'rgb',
+          color: new QColor().set_rgba({r, g, b, a: a_is_percent ? a / 100 : a})
+        };
+      },
       to_string: (color, precision, force_alpha = false) => {
         const rgb = QColor.hsl_to_rgb(color.h, color.s, color.l);
         const parts = [
@@ -36,7 +71,13 @@ export class QColor {
     },
     hex:   {
       parse:     (str) => {
-      
+        let match = str.match(/^#([0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3})$/i);
+        if (!match) return false;
+        const rgb = QColor.hex_to_rgb(match[1].slice(0, 6));
+        return {
+          mode:  'hex',
+          color: new QColor().set_rgba({r: rgb.r, g: rgb.g, b: rgb.b, a: match[1].length === 8 ? parseInt(match[1].slice(6, 8), 16) / 255.0 : 1.0})
+        };
       },
       to_string: (color, precision, force_alpha = false) => {
         const rgb = QColor.hsl_to_rgb(color.h, color.s, color.l);
@@ -49,7 +90,24 @@ export class QColor {
       }
     },
     oklch: {
-      parse:     (str) => {},
+      parse:     (str) => {
+        const regex = /oklch\((\d*\.\d+|\d+)\s+(\d*\.\d+|\d+)\s+(\d*\.\d+|\d+)\s*(?:\/\s*(\d*\.\d+|\d+)(%?)\s*)?\)/ig;
+        let matches = regex.exec(str);
+        if (!matches) return false;
+        
+        let l = parseFloat(matches[1]);
+        let c = parseFloat(matches[2]);
+        let h = parseFloat(matches[3]);
+        let a = parseFloat(matches[4] || 1);
+        let a_is_percent = matches[5] === '%';
+        
+        if (l < 0 || l > 1 || c < 0 || c > 0.47 || h < 0 || h > 360) return false;
+        
+        return {
+          mode:  'oklch',
+          color: new QColor().set_oklch({l, c, h, a: a_is_percent ? a / 100 : a})
+        };
+      },
       to_string: (color, precision, force_alpha = false) => {
         const oklch = QColor.hsl_to_oklch(color.h, color.s, color.l);
         const parts = [
@@ -71,47 +129,15 @@ export class QColor {
    * @returns {boolean|'hsla'|' hsl'}
    */
   parse(str) {
-    let hsl_match = this.#regex.hsl.exec(str);
-    if (hsl_match) {
-      this.h = parseFloat(hsl_match[2]);
-      this.s = parseFloat(hsl_match[5]);
-      this.l = parseFloat(hsl_match[8]);
-      
-      let spaces = hsl_match[4].trim() + hsl_match[7].trim();
-      if (spaces === ',') return false;
-      
-      let inferred_mode = (spaces === ',,') ? 'legacy' : 'modern';
-      
-      if (hsl_match[11]) {
-        spaces += hsl_match[11].trim();
-        if (![',,,', '/'].includes(spaces)) return false;
+    for (let m in QColor.modes) {
+      let mode = QColor.modes[m];
+      let resp = mode.parse(str);
+      if (resp) {
+        this.hsla = resp.color.hsla;
+        return resp.mode;
       }
-      
-      if (hsl_match[12]) {
-        const tmp = parseFloat(hsl_match[12]);
-        this.a = hsl_match[13] === '%' ? tmp / 100.0 : tmp;
-      }
-      
-      
-      
-      return 'hsl';
     }
-    let hex_match = str.match(/^#([0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3})$/i);
-    if (hex_match) {
-      const rgb = QColor.hex_to_rgb(hex_match[1].slice(0, 6));
-      this.set_rgba({r: rgb.r, g: rgb.g, b: rgb.b, a: hex_match[1].length === 8 ? parseInt(hex_match[1].slice(6, 8), 16) / 255.0 : 1.0});
-      return 'hex';
-    }
-    let rgba_match = str.match(/rgba\s*?\(\s*?(000|0?\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\s*?,\s*?(000|0?\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\s*?,\s*?(000|0?\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\s*?,\s*?(0|0*\.\d+|1|1.0*)\s*?\)/i);
-    if (rgba_match) {
-      this.set_rgba({r: parseFloat(rgba_match[1]), g: parseFloat(rgba_match[2]), b: parseFloat(rgba_match[3]), a: parseFloat(rgba_match[4])});
-      return 'rgb';
-    }
-    let rgb_match = str.match(/rgb\s*?\(\s*?(000|0?\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\s*?,\s*?(000|0?\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\s*?,\s*?(000|0?\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\s*?\)/i);
-    if (rgb_match) {
-      this.set_rgba({r: parseFloat(rgb_match[1]), g: parseFloat(rgb_match[2]), b: parseFloat(rgb_match[3]), a: 1.0});
-      return 'rgb';
-    }
+    
     
     return false;
   }
@@ -151,6 +177,7 @@ export class QColor {
     a = a != null ? a : curr.a;
     const hsl = QColor.rgb_to_hsl(r, g, b);
     this.hsla = {...hsl, a};
+    return this;
   }
   
   // HSV
@@ -164,6 +191,7 @@ export class QColor {
     let hsva = this.get_hsva();
     hsva = {...hsva, ...arguments[0]};
     this.hsla = {...QColor.hsv_to_hsl(hsva.h, hsva.s, hsva.v), a: hsva.a};
+    return this;
   }
   
   // OKLCH
@@ -183,14 +211,20 @@ export class QColor {
   
   
   /**
-   * @param {QColor|string|null} color Color string or QColor instance, defaults to black.
+   * @param {QColor|string|Object|null} color Color string or QColor instance, defaults to black.
    */
   constructor(color = null) {
-    if (color instanceof QColor) {
-      this.h = color.h;
-      this.s = color.s;
-      this.l = color.l;
-      this.a = color.a;
+    if (!color) return this;
+    
+    if (color instanceof QColor || typeof color === 'object') {
+      try {
+        this.h = color.h;
+        this.s = color.s;
+        this.l = color.l;
+        this.a = color.a;
+      } catch (e) {
+        console.error('Failed to create QColor from object: ', e);
+      }
     } else if (typeof color === 'string') {
       this.parse(color);
     }
@@ -201,7 +235,7 @@ export class QColor {
   
   /**
    * Converts the color to a string representation in the specified format.
-   * Todo: Consider legacy vs modern formatting for RGB(A) as well.
+   *
    * @param {'hsl'|'rgb'|'hex'|'oklch'} mode Output format: 'hsl', 'rgb', 'hex', or 'oklch'
    * @param {number} precision of decimal places for HSL and RGB components (alpha is always 2 decimals)
    * @param [force_alpha] Whether to include alpha in the output even if it's 1 (fully opaque)
