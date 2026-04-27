@@ -3,7 +3,7 @@
 
 **Qolor** is a dynamic, smart theme engine that generates modern, high-quality Firefox themes. It uses the cutting-edge OKLCH color space. This makes every combination look and feel perceptually perfect.
 
-![Photophobia](https://addons.mozilla.org/user-media/previews/full/367/367930.png)
+![Qolor](https://addons.mozilla.org/user-media/previews/full/367/367930.png)
 
 ### Features
 
