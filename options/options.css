@@ -619,18 +619,23 @@
 
 .sync-view, .delete-view {
   display: grid;
-  width: 250px;
+  min-width: 290px;
+  max-width: 90vw;
+  width: fit-content;
   min-height: 100%;
   height: fit-content;
   font-size: 1rem;
   box-sizing: border-box;
   border-radius: inherit;
+  overflow: hidden;
 
   &.hide {
     display: none;
   }
 
   header {
+    text-wrap: nowrap;
+
     small {
       border-bottom: 1px dashed oklch(from currentColor l c h / 0.5);
     }
@@ -727,6 +732,11 @@
       height: fit-content;
       padding-top: 0.5em;
       padding-bottom: 0.5em;
+      /*text-wrap: nowrap;*/
+      text-overflow: ellipsis;
+      width: fit-content;
+      display: inline-block;
+      overflow: hidden;
     }
   }
 

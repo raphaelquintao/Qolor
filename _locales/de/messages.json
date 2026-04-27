@@ -1,0 +1,162 @@
+{
+  "extension_description": {
+    "message": "Erstelle perfekte, harmonische Firefox-Themes mit einer hochmodernen OKLCH-Farbmaschine."
+  },
+  
+  "Show Output/Input": {
+    "message": "Ausgabe/Eingabe anzeigen"
+  },
+  "Show Slider Value": {
+    "message": "Reglerwert anzeigen"
+  },
+  "Show Slider Label": {
+    "message": "Reglerbeschriftung anzeigen"
+  },
+  
+  "Apply Colors to Popup/Sidebar": {
+    "message": "Farben auf Popup/Seitenleiste anwenden"
+  },
+  
+  "Toggle Sidebar": {
+    "message": "Seitenleiste umschalten"
+  },
+  "Open in Popout": {
+    "message": "In Popout öffnen"
+  },
+  "Restore Popout Position": {
+    "message": "Popout-Position wiederherstellen"
+  },
+  
+  "New Scheme": {
+    "message": "Neues Schema"
+  },
+  
+  "Color Wheel": {
+    "message": "Farbrad"
+  },
+  
+  "Light Mode": {
+    "message": "Heller Modus"
+  },
+  "Auto": {
+    "message": "Automatisch"
+  },
+  "Dark Mode": {
+    "message": "Dunkler Modus"
+  },
+  
+  "Single Tone": {
+    "message": "Einfarbig"
+  },
+  "Colorful": {
+    "message": "Bunt"
+  },
+  "Dual Tone": {
+    "message": "Zweiton"
+  },
+  
+  
+  "restore_tooltip": {
+    "message": "Aus der Cloud wiederherstellen (Alle nicht gespeicherten Einstellungen gehen verloren)"
+  },
+  "Save all to Cloud": {
+    "message": "Alles in der Cloud speichern"
+  },
+  
+  "Surprise Me!": {
+    "message": "Überrasch mich!"
+  },
+  
+  "Generate a random Scheme": {
+    "message": "Ein zufälliges Schema generieren!"
+  },
+  
+  "Export Scheme": {
+    "message": "Schema exportieren"
+  },
+  "Import Scheme": {
+    "message": "Schema importieren"
+  },
+  
+  "Generation Mode": {
+    "message": "Generierungsmodus"
+  },
+  
+  "Scheme is Synced": {
+    "message": "Schema ist synchronisiert"
+  },
+  "Local Scheme": {
+    "message": "Lokales Schema"
+  },
+  "Cloud Scheme": {
+    "message": "Cloud-Schema"
+  },
+  "Scheme has unsaved changes": {
+    "message": "Schema hat nicht gespeicherte Änderungen"
+  },
+  "Click for options": {
+    "message": "Für Optionen klicken"
+  },
+  "Restore from Cloud": {
+    "message": "Aus der Cloud wiederherstellen"
+  },
+  "Save to Cloud": {
+    "message": "In der Cloud speichern"
+  },
+  "Cloud Sync": {
+    "message": "Cloud-Synchronisation"
+  },
+  "Sync": {
+    "message": "Synchronisieren"
+  },
+  "Restore": {
+    "message": "Wiederherstellen"
+  },
+  "Save": {
+    "message": "Speichern"
+  },
+  "Clone Scheme": {
+    "message": "Schema klonen"
+  },
+  "Delete Scheme": {
+    "message": "Schema löschen"
+  },
+  "Locked Scheme": {
+    "message": "Gesperrtes Schema"
+  },
+  "Default Scheme": {
+    "message": "Standardschema"
+  },
+  "Lock Scheme": {
+    "message": "Schema sperren"
+  },
+  "Unlock Scheme": {
+    "message": "Schema entsperren"
+  },
+  "Cancel": {
+    "message": "Abbrechen"
+  },
+  "Delete": {
+    "message": "Löschen"
+  },
+  "Are you sure?": {
+    "message": "Bist du sicher?"
+  },
+  "Sure?": {
+    "message": "Sicher?"
+  },
+  "This action cannot be undone.": {
+    "message": "Diese Aktion kann nicht rückgängig gemacht werden."
+  },
+  "delete_message": {
+    "message": "Bist du sicher, dass du dieses Schema löschen möchtest?"
+  },
+  "sync_message": {
+    "message": "Die Synchronisierung zwischen Geräten kann bis zu <b>10 Minuten</b> dauern."
+  },
+  "sync_warning": {
+    "message": "Gleichzeitige Bearbeitungen können zu Versionskonflikten führen."
+  }
+  
+  
+}

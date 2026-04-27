@@ -1,7 +1,6 @@
 {
-  "extensionName": {
-    "message": "My Extension",
-    "description": "Name of the extension"
+  "extension_description": {
+    "message": "Build perfect, harmonious Firefox themes using a cutting-edge OKLCH colour engine."
   },
   
   "Show Output/Input": {

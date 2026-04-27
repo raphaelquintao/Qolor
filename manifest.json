@@ -3,7 +3,7 @@
   "default_locale": "en",
   "name": "Qolor: Dynamic Theme Engine",
   "short_name": "Qolor",
-  "description": "Build perfect, harmonious Firefox themes using a cutting-edge OKLCH colour engine.",
+  "description": "__MSG_extension_description__",
   "version": "2.0.1",
   "developer": {
     "name": "Raphael Quintão",
