@@ -1,69 +1,62 @@
 <svg
   xmlns="http://www.w3.org/2000/svg"
   viewBox="0 0 144 144"
-  width="48" height="48"
+  width="128" height="128"
   preserveAspectRatio="xMidYMid meet"
   shape-rendering="geometricPrecision"
+  color-rendering="optimizeQuality"
+  text-rendering="optimizeLegibility"
+  image-rendering="optimizeQuality"
   class="colors"
 >
   <style>
     .colors {
-      --r1: oklch(0.674 0.192 11.742);
-      --r2: oklch(0.621 0.23 17.55);
-      --l1: oklch(0.8 0.119 223.615);
-      --l2: oklch(0.736 0.144 229.7);
-
       --p: oklch(0.674 0.200 79);
-      --s: oklch(0.674 0.23 12);
-      --t: oklch(0.674 0.200 223);
+      --s: oklch(0.644 0.22 0);
+      --t: oklch(0.644 0.200 223);
 
 
       --p1: var(--primary, var(--p));
       --p2: oklch(from var(--p1) calc(l - 0.1) c h);
-      --p3: oklch(from var(--p1) calc(l - 0.3) c h);
 
       --s1: var(--secondary, var(--s));
-      --s2: oklch(from var(--s1) calc(l - 0.09) c h);
-      --s3: oklch(from var(--s1) calc(l - 0.0) c calc(h - 20));
+      --s2: oklch(from var(--s1) calc(l * 1.00) calc(c * 0.999) 12);
+      --s3: oklch(from var(--s1) calc(l * 0.85) calc(c * 0.999) 340);
 
       --t1: var(--tertiary, var(--t));
       --t2: oklch(from var(--t1) calc(l - 0.09) c h);
-      --t3: oklch(from var(--t1) calc(l - 0.8) c h);
+    }
 
+    .gradient {
+      position: absolute;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 0px;
+      background-image: conic-gradient(from 30deg in oklch shorter hue,
+      var(--s1), var(--s2) , var(--s3), var(--s1)
+      );
+      clip-path: url(#ring_clip);
+    }
 
   </style>
 
   <defs>
     <linearGradient id="ring_gradient"
-                    x1="0%" y1="0%" x2="100%" y2="0%"
+                    x1="0%" y1="0%" x2="100%" y2="100%"
+                    gradientUnits="objectBoundingBox"
                     color-interpolation="auto">
-      <stop stop-color="var(--s2)" offset="0%"/>
-      <stop stop-color="var(--s1)" offset="50%"/>
+      <stop stop-color="var(--s1)" offset="0%"/>
       <stop stop-color="var(--s2)" offset="100%"/>
     </linearGradient>
 
-    <radialGradient id="ring_gradient2"
-                    cx="50%" cy="50%" r="60%"
-                    fx="50%" fy="50%" fr="18%"
 
-                    gradientUnits="objectBoundingBox"
-
-                    color-interpolation="auto">
-      <stop stop-color="var(--s2)" offset="0" stop-opacity="1"/>
-      <stop stop-color="var(--s1)" offset="0.55" stop-opacity="1"/>
-      <stop stop-color="var(--s2)" offset="1" stop-opacity="1"/>
-    </radialGradient>
-
-    <radialGradient id="leg_gradient"
-                    cx="50%" cy="50%" r="100%"
-                    fx="50%" fy="50%" fr="0%"
-
+    <linearGradient id="leg_gradient"
+                    x1="0%" y1="0%" x2="100%" y2="100%"
                     gradientUnits="objectBoundingBox"
                     color-interpolation="auto">
-
-      <stop stop-color="var(--t1)" offset="0%" stop-opacity="1"/>
-      <stop stop-color="var(--t2)" offset="100%" stop-opacity="1"/>
-    </radialGradient>
+      <stop stop-color="var(--t1)" offset="0%"/>
+      <stop stop-color="var(--t2)" offset="100%"/>
+    </linearGradient>
 
     <clipPath id="ring_clip" clip-rule="evenodd">
       <path d="M 143,72 A 71,71 0 0,1 1,72 A 71,71 0 0,1 143,72 Z
@@ -72,15 +65,22 @@
 
   </defs>
 
-  <path
-    id="ring_path"
-    fill-rule="evenodd"
-    fill="url(#ring_gradient2)" fill-opacity="1"
-    stroke="url(#ring_gradient2)" stroke-opacity="1"
-    stroke-width="1" opacity="1"
-    d="M 143,72 A 71,71 0 0,1 1,72 A 71,71 0 0,1 143,72 Z
-           M 112,72 A 40,40 0 0,1 32,72 A 40,40 0 0,1 112,72 Z"
-  />
+
+  <foreignObject x="0" y="0" width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml" class="gradient" ></div>
+  </foreignObject>
+
+  <!--  <rect x="0" y="0" width="144" height="144" fill="url(#ring_gradient)" clip-path="url(#ring_clip)"/>-->
+
+  <!--  <path-->
+  <!--    id="ring_path"-->
+  <!--    fill-rule="evenodd"-->
+  <!--    fill="url(#ring_gradient)" fill-opacity="1"-->
+  <!--    stroke="url(#ring_gradient)" stroke-opacity="1"-->
+  <!--    stroke-width="1" opacity="1"-->
+  <!--    d="M 143,72 A 71,71 0 0,1 1,72 A 71,71 0 0,1 143,72 Z-->
+  <!--           M 112,72 A 40,40 0 0,1 32,72 A 40,40 0 0,1 112,72 Z"-->
+  <!--  />-->
 
 
   <g transform="rotate(-45 142 142)" opacity="1">

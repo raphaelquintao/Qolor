@@ -124,7 +124,6 @@ export class QColor {
   
   /**
    * Parses a color string in HSL(A), RGB(A) or Hex format and updates the color's properties accordingly.<br>
-   * Todo: Imrpove regex for RGB(A) and flexibilize parsing to fix common errors.<br>
    * @param str
    * @returns {boolean|'hsla'|' hsl'}
    */
@@ -389,7 +388,6 @@ export class QColor {
   /**
    * Modifies a color to ensure a minimum contrast ratio against a "background" color.<br>
    * Adjusts lightness first, then reduces saturation if lightness alone is insufficient.<br>
-   * Todo: Consider alpha adjustments before falling back to desaturation.
    *
    * @param {QColor} background_color The color to calculate the contrast against.
    * @param {number} contrast_ratio Decimal number specifying the minimum contrast ratio.
@@ -417,7 +415,7 @@ export class QColor {
       }
       let candidate = color.clone();
       // if (candidate.a < 1) candidate.a = 1;
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 20; i++) {
         let mid = (lo + hi) / 2;
         candidate.l = mid;
         if (candidate.contrast_ratio(background_color) >= contrast_ratio) {
@@ -459,7 +457,7 @@ export class QColor {
     let s_lo = 0;
     let s_hi = modified.s;
     let best = null;
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 20; i++) {
       let s_mid = (s_lo + s_hi) / 2;
       let attempt = modified.clone();
       attempt.s = s_mid;
@@ -561,7 +559,7 @@ export class QColor {
       }
       let candidate = color.clone();
       // if (candidate.a < 1) candidate.a = 1;
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 20; i++) {
         let mid = (lo + hi) / 2;
         const clamped = QColor.gamut_clamp_oklch(mid, oklch.c, oklch.h);
         candidate.set_oklch({l: clamped.l, c: clamped.c, h: clamped.h});
@@ -609,7 +607,7 @@ export class QColor {
     let c_lo = 0;
     let c_hi = oklch.c;
     let best = null;
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 20; i++) {
       let c_mid = (c_lo + c_hi) / 2;
       let attempt = modified.clone();
       attempt.set_oklch({c: c_mid});
@@ -667,8 +665,8 @@ export class QColor {
       b = Math.round(b * 255);
     } else {
       r = Math.round(r);
-      g = Math.round(r);
-      b = Math.round(r);
+      g = Math.round(g);
+      b = Math.round(b);
     }
     return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
   }
@@ -968,7 +966,7 @@ export class QColor {
     // Binary search on chroma
     let lo = 0;
     let hi = c;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 20; i++) {
       const mid = (lo + hi) / 2;
       if (QColor.#is_in_srgb_gamut(l, mid, h)) {
         lo = mid;

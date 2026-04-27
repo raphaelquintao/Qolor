@@ -2,11 +2,15 @@ import { QColor } from './q_color.js';
 import { QRandomInt } from './q_utils.js';
 
 export class QScheme {
+  id = "";
+  order = 0;
+  created = 0;
   /** @type {QColor[]} */
   cached = [];
   cached_theme = null;
   hash_colors = null;
   hash_theme = null;
+  tmp = {}
   
   
   get editable() {
@@ -17,40 +21,72 @@ export class QScheme {
     return (this.id === '_default');
   }
   
+  get virtual_created() {
+    return this.default ? 0 : this.created || 0;
+  }
   
-  constructor(name = "", id = "") {
+  get usage() {
+    return this?.tmp?.usage || 0;
+  }
+  
+  set usage(usage) {
+    if(!this.tmp) this.tmp = {};
+    this.tmp.usage = usage;
+  }
+  
+  /**
+   * @param id
+   * @param {{order?: number, created?: number, gen_mode?: 'normal'|'colorful'|'dual', panel?:string, text?:string}} options
+   */
+  constructor(id = "", options = {}) {
     this.id = (id === "") ? QScheme.unique_id() : id;
-    this.name = (name === "") ? 'no_name_scheme' : name;
+    
+    this.order = options?.order !== undefined ? options.order : 0;
+    this.created = options?.created !== undefined ? options.created : Date.now();
     
     this.locked = false;
     
     /** @type {'normal'|'colorful'|'dual'} */
-    this.gen_mode = 'normal';
+    this.gen_mode = options?.gen_mode || 'normal';
     this.theme_mode = 'dark';
     this.page_mode = 'dark';
     
     /** @type {QColor} */
-    this.panel = new QColor('hsl(220, 9%, 23%)');
+    this.panel = new QColor(options?.panel || 'hsl(220, 9%, 23%)');
     /** @type {QColor} */
-    this.text = new QColor('hsl(214, 2%, 90%)');
+    this.text = new QColor(options?.text || 'hsl(214, 2%, 90%)');
     
   }
   
   
   hash() {
-    let tmp = `${this.id}|`;
+    let tmp = `${this.id}|${this.created}|${this.locked}|`;
     tmp += `${this.gen_mode}|${this.theme_mode}|${this.page_mode}|`;
     tmp += `${this.panel.to_string('hsl')}|${this.text.to_string('hsl')}`;
     
     return tmp;
   }
   
-  
+  serialize() {
+    return JSON.stringify(this, (key, value) => {
+      if (['cached', 'cached_theme', 'hash_colors', 'hash_theme', 'tmp'].includes(key)) return undefined;
+      return value;
+    });
+  }
   
   parse(obj) {
+    if (typeof obj === 'string') obj = JSON.parse(obj);
     if (obj.id) this.id = obj.id;
-    if (obj.name) this.name = obj.name;
-    if (obj.locked) this.locked = obj.locked;
+    if (obj.cached) this.cached = obj.cached.map(c => {
+      if (typeof c === 'string') c = JSON.parse(c);
+      return new QColor(c);
+    });
+    if (obj.cached_theme) this.cached_theme = obj.cached_theme;
+    if (obj.hash_colors) this.hash_colors = obj.hash_colors;
+    if (obj.hash_theme) this.hash_theme = obj.hash_theme;
+    if (obj.order !== undefined) this.order = obj.order;
+    if (obj.created !== undefined) this.created = obj.created;
+    if (obj.locked !== undefined) this.locked = obj.locked;
     if (obj.gen_mode) this.gen_mode = obj.gen_mode;
     if (obj.theme_mode) this.theme_mode = obj.theme_mode;
     if (obj.page_mode) this.page_mode = obj.page_mode;
@@ -59,6 +95,13 @@ export class QScheme {
     if (obj.text) this.text = new QColor(obj.text);
     
     return this;
+  }
+  
+  static unserialize(obj) {
+    let scheme = new QScheme();
+    scheme.parse(obj);
+    // scheme.compute_colors();
+    return scheme;
   }
   
   compute_colors(min_contrast = 5) {
@@ -139,15 +182,20 @@ export class QScheme {
   }
   
   /** @return {QScheme} */
-  clone() {
+  clone(full = false) {
+    if (full) {
+      return new QScheme().parse(this.serialize());
+    }
     let cur = JSON.parse(JSON.stringify(this));
     cur.id = QScheme.unique_id();
+    cur.created = Date.now();
+    cur.tmp = {};
     return new QScheme().parse(cur);
   }
   
   
-  equals(qcolor) {
-    return (JSON.stringify(this) === JSON.stringify(qcolor));
+  equals(other) {
+    return (other instanceof QScheme && this.hash() === other.hash());
   }
   
   static gen_gradient(colors = ['red', 'blue'], width = 1980, height = 100, angle = 45) {
@@ -196,7 +244,7 @@ export class QScheme {
    */
   static async set_icon(p, s, t, gen_mode) {
     if (!QScheme.svg_icon) {
-      QScheme.svg_icon = await fetch(browser.runtime.getURL('assets/icons/icon.svg')).then(resp => {
+      QScheme.svg_icon = await fetch(browser.runtime.getURL('assets/icons/icon_flat.svg')).then(resp => {
         return resp.text();
       });
     }
@@ -239,7 +287,7 @@ export class QScheme {
     QScheme.set_icon(text, icon_color, hlcolor, scheme.gen_mode);
     
     if (scheme.cached_theme && scheme.hash_theme === scheme.hash()) {
-      console.log('Theme is up to date for', `${scheme?.id}` );
+      console.log('Theme is up to date for', `${scheme?.id}`);
     } else {
       
       
@@ -322,7 +370,7 @@ export class QScheme {
           
           // -- New Tab
           "ntp_background":      panel.shade_oklch("l(-35%)").to_string(),
-          "ntp_card_background": panel.shade_oklch("l(-10%)").to_string(),
+          "ntp_card_background": panel.shade_oklch("l(-10%) a(-5%)").to_string(),
           "ntp_text":            text.to_string(),
           
           "accent_color": 'red',

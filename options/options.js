@@ -1,57 +1,38 @@
+import { QCollection } from '../src/core/q_collection.js';
 import { QColor } from '../src/core/q_color.js';
 import { register_q_svg } from '../src/core/q_html_elements.js';
 import { QPicker } from '../src/core/q_picker.js';
-import { QCollection, UUID } from "../src/core/q_utils.js";
+import { BYTES_TO_STRING, THROTTLE, UI, UUID } from "../src/core/q_utils.js";
 
 // -- SETUP ---
+const MY_ID = UUID();
 const URL_SEARCH_PARAMS = new URLSearchParams(window.location.search);
 const VIEW = URL_SEARCH_PARAMS.get('view') || 'popup';
 document.documentElement.dataset.view = VIEW;
-const MY_ID = UUID();
 
-console.info('Options View Open:', document.documentElement.dataset.view);
+// console.info('Options View Open:', document.documentElement.dataset.view);
 
-
-// -- HELPERS --
-
-class UI {
-  static create_button(label_text = '', options = {}) {
-    let button = document.createElement('button');
-    button.innerHTML = label_text;
-    for (let [key, value] of Object.entries(options)) button[key] = value;
-    return button;
-  }
-  
-  static create_checkbox(label_text = '', checked = false, options = {}) {
-    options.checked = checked;
-    return UI.create_input('checkbox', label_text, options);
-  }
-  
-  static create_input(type = 'checkbox', label_text = '', options = {}) {
-    let input = document.createElement('input');
-    input.type = type;
-    for (let [key, value] of Object.entries(options)) input[key] = value;
-    let label = UI.create_label(label_text, input);
-    return input;
-  }
-  
-  static create_label(text, input = null) {
-    let label = document.createElement('label');
-    label.innerHTML = text;
-    if (input) label.prepend(input);
-    return label;
-  }
+function _(message, substitutions = undefined) {
+  return browser.i18n.getMessage(message, substitutions) || message;
 }
+
+document.body.innerHTML = document.body.innerHTML.replaceAll(/__MSG_(.+)__/g, (substring, args) => {
+  // console.debug('Translating message', {substring, args});
+  return _(args);
+});
+register_q_svg();
+
 
 
 // -- DOM Elements
+const advanced_prefs_section = document.querySelector('.advanced-prefs-section');
 const prefs_container = document.querySelector('.prefs-container');
 const pickers_container = document.querySelector('#pickers-container');
 const scheme_selector = document.querySelector('#scheme-selector');
-const scheme_info = document.querySelector('.scheme-section .info');
 const scheme_container = document.querySelector('#scheme-selector .scheme-container');
 const header_actions = document.querySelector('#main-header .actions');
 const header_logo_container = document.querySelector('#main-header .logo-container');
+const header_logo = document.querySelector('#main-header .logo-container .logo');
 const header_title = document.querySelector('#main-header .title');
 const output_selector = document.querySelector('#output-selector');
 
@@ -60,34 +41,31 @@ document.title = browser.runtime.getManifest().short_name + `- ${VIEW.charAt(0).
 
 // -- Create Options Checkboxes
 const options = {
-  show_output:        UI.create_checkbox('Show Output/Input', false, {className: 'checkbox-switch'}),
-  show_slider_value:  UI.create_checkbox('Show Slider Value', false, {className: 'checkbox-switch'}),
-  show_slider_label:  UI.create_checkbox('Show Slider Label', false, {className: 'checkbox-switch'}),
-  apply_colors_popup: UI.create_checkbox('Apply Colors to Popup', false, {className: 'checkbox-switch'}),
+  show_output:        UI.create_checkbox(_('Show Output/Input'), false, {className: 'checkbox-switch'}),
+  show_slider_value:  UI.create_checkbox(_('Show Slider Value'), false, {className: 'checkbox-switch'}),
+  show_slider_label:  UI.create_checkbox(_('Show Slider Label'), false, {className: 'checkbox-switch'}),
+  apply_colors_popup: UI.create_checkbox(_('Apply Colors to Popup/Sidebar'), false, {className: 'checkbox-switch'}),
 };
 for (let key in options) prefs_container.append(options[key].parentElement);
 
-output_selector.dataset.name = `qp-output-mode-${crypto.randomUUID()}`;
+output_selector.dataset.name = `qp-output-mode-${MY_ID}`;
 
 for (let mode of QPicker.OUTPUT_MODES) {
-  let radio = document.createElement('input');
-  radio.type = 'radio';
-  radio.name = output_selector.dataset.name;
-  radio.value = mode;
-  radio.classList.add('btn');
-  radio.checked = false;
-  let label = document.createElement('label');
-  label.innerText = mode.toUpperCase();
-  label.prepend(radio);
-  output_selector.append(label);
-  // this.out_modes.push(radio);
+  let radio = UI.create_input('radio', mode.toUpperCase(), {
+    name:      output_selector.dataset.name,
+    value:     mode,
+    checked:   false,
+    className: 'btn'
+  });
+  output_selector.append(radio.parentElement);
 }
 
 
+
 // -- Create Header Action Buttons
-const btn_open_sidebar = UI.create_button('<i class="fa-solid fa-right-to-bracket fa-flip-horizontal"></i>', {title: 'Toggle Sidebar'});
-const btn_open_popout = UI.create_button('<i class="fa-solid fa-up-right-from-square"></i>', {title: 'Open Popout'});
-const btn_restore_popout = UI.create_button('<i class="fa-regular fa-window-restore"></i>', {title: 'Restore Popout Position'});
+const btn_open_sidebar = UI.create_button('<i class="fa-solid fa-right-to-bracket fa-flip-horizontal"></i>', {dataset: {title: _('Toggle Sidebar')}});
+const btn_open_popout = UI.create_button('<i class="fa-solid fa-up-right-from-square"></i>', {dataset: {title: _('Open in Popout')}});
+const btn_restore_popout = UI.create_button('<i class="fa-regular fa-window-restore"></i>', {dataset: {title: _('Restore Popout Position')}});
 if (VIEW === 'popout') {
   header_actions.prepend(btn_restore_popout);
 } else if (VIEW === 'sidebar') {
@@ -110,13 +88,13 @@ btn_open_sidebar.addEventListener('click', ev => {
   browser.sidebarAction.toggle();
 });
 
-// -- Other Buttons
-let btn_surprise = document.getElementById('btn-surprise');
-let btn_reload = document.getElementById('btn-reload');
-let btn_save = document.getElementById('btn-save');
-let btn_sync = document.getElementById('btn-sync');
-
+// -- DOM Buttons
 let btn_new = document.getElementById('btn-new');
+let btn_reload = document.getElementById('btn-reload');
+
+let btn_surprise = document.getElementById('btn-surprise');
+let btn_sync_load = document.getElementById('btn-sync-load');
+let btn_sync_save = document.getElementById('btn-sync-save');
 
 let opt_color_wheel = document.getElementById('opt-color-wheel');
 let opt_lock = document.getElementById('opt-lock');
@@ -124,14 +102,29 @@ let opt_theme_mode = document.querySelectorAll('input[name="opt-theme-mode"]');
 let opt_gen_mode = document.querySelectorAll('input[name="opt-gen-mode"]');
 let opt_output_mode = document.querySelectorAll(`input[name="${output_selector.dataset.name}"]`);
 
-
-
 btn_new.addEventListener('click', ev => {
   browser.runtime.sendMessage({key: 'new_scheme', origin: MY_ID});
 });
 
-btn_sync.addEventListener('click', ev => {
-  browser.runtime.sendMessage({key: 'sync', origin: MY_ID});
+let sync_load_confirm_timeout = null;
+let sync_load_restore = () => {
+  btn_sync_load.classList.remove('show-confirm', 'btn-danger');
+  sync_load_confirm_timeout = null;
+};
+btn_sync_load.addEventListener('click', ev => {
+  ev.preventDefault();
+  if (!sync_load_confirm_timeout) {
+    ev.currentTarget.classList.add('show-confirm', 'btn-danger');
+    sync_load_confirm_timeout = setTimeout(sync_load_restore, 2000);
+    return;
+  }
+  clearTimeout(sync_load_confirm_timeout);
+  sync_load_restore();
+  browser.runtime.sendMessage({key: 'sync-load', origin: MY_ID});
+});
+
+btn_sync_save.addEventListener('click', ev => {
+  browser.runtime.sendMessage({key: 'sync-save', origin: MY_ID});
 });
 
 btn_reload.addEventListener('click', ev => {
@@ -147,7 +140,6 @@ btn_surprise.addEventListener('click', ev => {
     scheme.randomize();
     scheme.compute_colors();
     
-    
     scheme.apply();
     
     browser.runtime.sendMessage({
@@ -162,24 +154,16 @@ btn_surprise.addEventListener('click', ev => {
 
 
 // -- Create Pickers
-const panel_picker = new QPicker({
-  label:                     '',
-  show_output_mode_selector: false,
-});
-const text_picker = new QPicker({
-  label:                     '',
-  show_output_mode_selector: false,
-});
+const panel_picker = new QPicker({show_output_mode_selector: false});
+const text_picker = new QPicker({show_output_mode_selector: false});
 panel_picker.append_to(pickers_container);
 text_picker.append_to(pickers_container);
 
-panel_picker.addEventListener('colorchange', evt => {
-  console.log('PANEL COLOR CHANGE', evt);
+panel_picker.addEventListener('colorchange', THROTTLE(evt => {
   /** @type {QColor} */
   let color = evt.color.clone();
   
   get_updated_data().then(data => {
-    console.info('Got data response from background page:', data);
     let data_loaded = data.loaded;
     let scheme = data_loaded.get_selected();
     scheme.panel = color;
@@ -195,10 +179,9 @@ panel_picker.addEventListener('colorchange', evt => {
     });
   });
   
-});
+}, 32));
 
-text_picker.addEventListener('colorchange', evt => {
-  console.log('TEXT COLOR CHANGE', evt);
+text_picker.addEventListener('colorchange', THROTTLE(evt => {
   /** @type {QColor} */
   let color = evt.color.clone();
   
@@ -216,7 +199,7 @@ text_picker.addEventListener('colorchange', evt => {
       origin: MY_ID
     });
   });
-});
+}, 32));
 
 
 
@@ -233,28 +216,65 @@ function bind_ui_events() {
   
   scheme_selector.addEventListener('wheel', ev => {
     ev.preventDefault();
+    // console.debug('Wheel event on scheme selector', {deltaX: ev.deltaX, deltaY: ev.deltaY});
     scheme_selector.scrollBy({
       left:     ev.deltaY > 0 ? 90 : -90,
       behavior: 'smooth'
+    });
+    scheme_selector.querySelectorAll('.flip').forEach((el, i) => {
+      el.classList.remove('flip');
     });
     
   }, {passive: false});
   
   
-  // Simple tooltip.
+  document.addEventListener('click', ev => {
+    for (let el of collapsable) {
+      if (el.dataset.collapsed === 'false' && !el.contains(ev.target)) {
+        el.dataset.collapsed = 'true';
+      }
+    }
+    scheme_selector.querySelectorAll('.flip').forEach((el, i) => {
+      if (el.contains(ev.target)) return;
+      el.classList.remove('flip');
+    });
+  });
+  
+  // Tooltip
+  let _active_tooltip = null;
+  let _active_tooltip_timeout = null;
+  
+  function _clear_tooltip() {
+    clearTimeout(_active_tooltip_timeout);
+    _active_tooltip_timeout = null;
+    if (_active_tooltip) {
+      _active_tooltip.remove();
+      _active_tooltip = null;
+    }
+  }
+  
+  document.documentElement.addEventListener('mousemove', ev => {
+    // console.log('Move event', ev.target, ev.clientX, ev.clientY);
+    document.documentElement.style.setProperty('--mouse-x', `${ev.clientX}px`);
+    document.documentElement.style.setProperty('--mouse-y', `${ev.clientY}px`);
+  });
+  
   document.addEventListener('mouseover', ev => {
     if (ev.target.title && ev.target.title.length > 0) {
-      ev.target.dataset.title = ev.target.title;
+      ev.target.dataset.title = _(ev.target.title);
       ev.target.removeAttribute('title');
     }
     
     if (ev.target.dataset.title) {
-      // console.log('Show tooltip for', ev.target, ev.target.dataset.title);
+      _clear_tooltip();
+      
       let tooltip = document.createElement('div');
       tooltip.className = 'tooltip';
       tooltip.innerHTML = ev.target.dataset.title;
       document.body.append(tooltip);
-      const timeout = setTimeout(() => {
+      _active_tooltip = tooltip;
+      
+      _active_tooltip_timeout = setTimeout(() => {
         tooltip.style.opacity = '1';
       }, 500);
       
@@ -273,10 +293,7 @@ function bind_ui_events() {
       tooltip.style.top = `${top}px`;
       tooltip.style.left = `${left}px`;
       
-      ev.target.addEventListener('mouseleave', () => {
-        clearTimeout(timeout);
-        tooltip.remove();
-      }, {once: true});
+      ev.target.addEventListener('mouseleave', _clear_tooltip, {once: true});
     }
   });
   
@@ -286,74 +303,160 @@ bind_ui_events();
 
 function create_scheme_card(scheme, selected = false) {
   
-  let scheme_card = document.createElement('div');
-  scheme_card.className = 'scheme-card';
-  scheme_card.id = scheme.id;
-  scheme_card.style.setProperty('--bg', scheme.panel.toString());
-  scheme_card.style.setProperty('--fg', scheme.text.toString());
+  let scheme_card_holder = UI.create_element('div', {
+    className: 'scheme-card-holder'
+  });
   
-  let card_inner = document.createElement('div');
-  card_inner.className = 'card-inner';
+  let scheme_card = UI.create_element('div', {className: 'scheme-card', id: scheme.id});
+  
+  scheme_card_holder.append(scheme_card);
+  
+  
+  let card_inner = UI.create_element('div', {className: 'card-inner'});
   scheme_card.append(card_inner);
   
-  
-  let card_front = document.createElement('div');
-  card_front.className = 'card-front';
-  let card_back = document.createElement('div');
-  card_back.className = 'card-back';
+  let card_front = UI.create_element('div', {className: 'card-front'});
+  let card_back = UI.create_element('div', {className: 'card-back'});
   
   card_inner.append(card_front, card_back);
   
-  let modes = document.createElement('span');
-  modes.className = 'modes';
+  let modes = UI.create_element('span', {className: 'modes'});
   card_front.append(modes);
   
-  let gen_mode = document.createElement('span');
-  gen_mode.className = 'mode gen-mode';
+  let gen_mode = UI.create_element('span', {className: 'mode gen-mode'});
   modes.append(gen_mode);
   
-  
-  let actions_left = document.createElement('span');
-  actions_left.className = 'actions left';
-  card_front.append(actions_left);
-  
-  let actions_right = document.createElement('span');
-  actions_right.className = 'actions';
-  card_front.append(actions_right);
+  let actions_left = UI.create_element('span', {className: 'actions left'});
+  let actions_right = UI.create_element('span', {className: 'actions'});
+  card_front.append(actions_left, actions_right);
   
   
-  let button_sync = document.createElement('button');
-  button_sync.className = 'btn-icon sync';
+  // Buttons
+  
+  let button_sync = UI.create_element('button', {className: 'btn-icon sync'});
+  let default_indicator = UI.create_element('button', {className: 'btn-icon default'});
+  let button_delete = UI.create_element('button', {className: 'btn-icon delete'});
+  let button_clone = UI.create_element('button', {className: 'btn-icon clone'});
+  
+  
+  // let button_export = document.createElement('button');
+  // button_export.className = 'btn-icon';
+  // button_export.innerHTML = '<i class="fa-solid fa-file-export"></i>';
+  
+  
   actions_left.append(button_sync);
+  actions_right.append(default_indicator, button_delete, button_clone);
+  
+  let delete_view = UI.create_element('div', {className: 'delete-view alert danger'});
+  let delete_dismiss = UI.create_element('button', {
+    className: 'btn-icon dismiss',
+    innerHTML: '<i class="fa-solid fa-xmark"></i>'
+  });
+  
+  let delete_header = UI.create_element('header', {
+    innerHTML: `<span class="title">${_('Delete Scheme')}</span>`,
+  });
+  
+  let delete_message = UI.create_element('div', {
+    className: 'content',
+    innerHTML: _('delete_message'),
+  });
+  
+  let delete_cancel = UI.create_element('button', {
+    className: 'cancel',
+    dataset:   {title: _('Cancel')},
+    innerHTML: _('Cancel'),
+  });
+  
+  let delete_confirm = UI.create_element('button', {
+    className: 'btn-info',
+    dataset:   {title: _('Delete')},
+    innerHTML: '<i class="fa-solid fa-trash-can"></i> ' + _('Delete'),
+  });
   
   
-  const default_indicator = document.createElement('button');
-  default_indicator.className = 'btn-icon default';
-  actions_right.append(default_indicator);
+  let delete_footer = UI.create_element('footer');
+  delete_footer.append(delete_cancel, delete_confirm);
   
-  let button_delete = document.createElement('button');
-  button_delete.className = 'btn-icon delete';
-  actions_right.append(button_delete);
+  delete_view.append(delete_header, delete_dismiss, delete_message, delete_footer);
   
-  let button_clone = document.createElement('button');
-  button_clone.className = 'btn-icon clone';
-  actions_right.append(button_clone);
+  card_back.append(delete_view);
   
-  // let button_flip = document.createElement('button');
-  // button_flip.className = 'btn-icon flip';
-  // button_flip.innerHTML = '<i class="fa-solid fa-right-left"></i>';
-  // actions_right.append(button_flip);
-  //
-  // button_flip.addEventListener('click', ev => {
-  //   ev.preventDefault();
-  //   ev.stopPropagation();
-  //   scheme_card.classList.toggle('flip');
-  // });
+  
+  let sync_view = UI.create_element('div', {className: 'sync-view alert info hide'});
+  let sync_dismiss = UI.create_element('button', {
+    className: 'btn-icon dismiss',
+    innerHTML: '<i class="fa-solid fa-xmark"></i>'
+  });
+  let sync_header = UI.create_element('header', {
+    innerHTML: `<span class="title">${_('Cloud Sync')}</span>`,
+  });
+  
+  let sync_message = UI.create_element('div', {
+    className: 'content sync-message',
+  });
+  sync_message.innerHTML = `<span>${_('sync_message')}</span>`;
+  sync_message.innerHTML += `<i class="fa fa-exclamation"></i><small>${_('sync_warning')}</small>`;
+  
+  let btn_restore_cloud = UI.create_element('button', {
+    className: 'btn-restore-from-cloud btn-info',
+    dataset:   {title: _('Restore from Cloud')},
+    innerHTML: '<i class="fa-solid fa-cloud-arrow-down"></i> ' + _('Restore'),
+  });
+  
+  let btn_remove_cloud = UI.create_element('button', {
+    className: 'btn-remove-from-cloud btn-danger',
+    dataset:   {title: _('Remove from Cloud')},
+    innerHTML: '<i class="fa-solid fa-trash"></i> ' + _('Delete'),
+  });
+  
+  let btn_save_cloud = UI.create_element('button', {
+    className: 'btn-save-to-cloud btn-success',
+    dataset:   {title: _('Save to Cloud')},
+    innerHTML: '<i class="fa-solid fa-cloud-arrow-up"></i> ' + _('Save'),
+  });
+  
+  let sync_footer = UI.create_element('footer');
+  sync_footer.append(btn_restore_cloud, btn_remove_cloud, btn_save_cloud);
+  
+  sync_view.append(sync_header, sync_dismiss, sync_message, sync_footer);
+  
+  card_back.append(sync_view);
+  
+  
+  [delete_cancel, delete_dismiss, sync_dismiss].forEach(value => {
+    value.addEventListener('click', ev => {
+      ev.stopPropagation();
+      scheme_card.classList.remove('flip');
+    });
+  });
+  
+  btn_restore_cloud.addEventListener('click', ev => {
+    browser.runtime.sendMessage({key: 'restore_scheme', id: scheme.id, origin: MY_ID}).then(() => {
+      scheme_card.classList.remove('flip');
+    });
+  });
+  
+  btn_remove_cloud.addEventListener('click', ev => {
+    browser.runtime.sendMessage({key: 'delete_scheme', id: scheme.id, from: ['sync'], origin: MY_ID});
+  });
+  
+  btn_save_cloud.addEventListener('click', ev => {
+    browser.runtime.sendMessage({key: 'sync-save', id: scheme.id, origin: MY_ID}).then(() => {
+      scheme_card.classList.remove('flip');
+    });
+  });
+  
+  delete_confirm.addEventListener('click', ev => {
+    browser.runtime.sendMessage({key: 'delete_scheme', id: scheme.id, from: ['local', 'sync'], origin: MY_ID});
+  });
   
   button_sync.addEventListener('click', ev => {
     ev.stopPropagation();
     if (button_sync.style.cursor !== 'pointer') return;
-    browser.runtime.sendMessage({key: 'restore_scheme', id: scheme.id, origin: MY_ID});
+    scheme_card.classList.add('flip');
+    delete_view.classList.add('hide');
+    sync_view.classList.remove('hide');
   });
   
   
@@ -364,11 +467,9 @@ function create_scheme_card(scheme, selected = false) {
   
   button_delete.addEventListener('click', ev => {
     ev.stopPropagation();
-    if (scheme.locked) return;
-    let sure = confirm("Are you sure you want to delete this scheme?");
-    if (sure) {
-      browser.runtime.sendMessage({key: 'delete_scheme', id: scheme.id, origin: MY_ID});
-    }
+    scheme_card.classList.add('flip');
+    sync_view.classList.add('hide');
+    delete_view.classList.remove('hide');
   });
   
   card_front.addEventListener('click', ev => {
@@ -377,12 +478,12 @@ function create_scheme_card(scheme, selected = false) {
   });
   
   
-  return scheme_card;
+  return scheme_card_holder;
 }
 
 
 /**
- * @param {{synced: QCollection, loaded: QCollection}} data
+ * @param {{synced: QCollection, loaded: QCollection, usage: {sync: number, local: number}}} data
  * @param {string} origin
  * @param {string[]} ignore
  */
@@ -395,9 +496,12 @@ function update_ui(data, origin = 'bg', ignore = []) {
   const selected_scheme = loaded.get_selected();
   
   if (data.loaded.equals(data.synced)) {
-    btn_sync.disabled = true;
+    btn_sync_save.disabled = true;
+    btn_sync_load.disabled = true;
   } else {
-    btn_sync.disabled = false;
+    console.debug('Unsynced changes detected, enabling sync buttons', data.usage);
+    btn_sync_save.disabled = false;
+    btn_sync_load.disabled = data.usage.sync === 0;
   }
   
   
@@ -405,26 +509,18 @@ function update_ui(data, origin = 'bg', ignore = []) {
     options[key].checked = loaded.options[key];
   }
   
-  scheme_info.innerHTML = `<small>(${loaded._schemes.length})</small>`;
   
-  // header_logo_container.style.setProperty('--primary', selected_scheme.cached[1].to_string());
-  // header_logo_container.style.setProperty('--secondary', selected_scheme.cached[4].to_string());
-  // header_logo_container.style.setProperty('--tertiary', selected_scheme.cached[5].to_string());
-  
-  // header_logo_container.querySelectorAll('q-svg').forEach(el => {
-  //   el.setAttribute('data-class', `gen-${selected_scheme.gen_mode}`);
-  // });
-  
+  let loading_card = scheme_container.querySelector('.scheme-card.loading');
+  if (loading_card) loading_card.remove();
   let scheme_cards = scheme_container.querySelectorAll('.scheme-card');
-  if (scheme_cards.length !== loaded.schemes.length) {
-    if (scheme_cards.length === 0) scheme_container.innerHTML = '';
-    for (let scheme of loaded.schemes) {
-      if (!scheme_cards || ![...scheme_cards].find(c => c.id === scheme.id)) {
-        let card = create_scheme_card(scheme, false);
-        scheme_container.append(card);
-      }
+  for (let scheme of loaded.schemes) {
+    if (!scheme_cards || ![...scheme_cards].find(c => c.id === scheme.id)) {
+      let card = create_scheme_card(scheme, false);
+      scheme_container.append(card);
     }
   }
+  
+  
   scheme_cards = scheme_container.querySelectorAll('.scheme-card');
   
   for (let card of scheme_cards) {
@@ -436,67 +532,95 @@ function update_ui(data, origin = 'bg', ignore = []) {
       
       card.style.setProperty('--bg', scheme.cached[0].to_string());
       card.style.setProperty('--fg', scheme.cached[1].to_string());
+      card.style.setProperty('--primary', scheme.cached[1].to_string());
+      card.style.setProperty('--secondary', scheme.cached[4].to_string());
+      card.style.setProperty('--tertiary', scheme.cached[5].to_string());
       
-      let gen_mode = card.querySelector('.modes .gen-mode');
-      gen_mode.dataset.title = 'Generation Mode:';
+      let gen_mode = card.querySelector('.gen-mode');
+      gen_mode.dataset.title = _('Generation Mode') + ': ';
       
       let qsvg = gen_mode.querySelector('q-svg');
       if (!qsvg) {
         qsvg = document.createElement('q-svg');
         gen_mode.append(qsvg);
       }
-      qsvg.style.setProperty('--primary', scheme.cached[1].to_string());
-      qsvg.style.setProperty('--secondary', scheme.cached[4].to_string());
-      qsvg.style.setProperty('--tertiary', scheme.cached[5].to_string());
-      qsvg.setAttribute('width', '2.5em');
-      qsvg.setAttribute('height', '2.5em');
+      qsvg.setAttribute('width', '2.3em');
+      qsvg.setAttribute('height', '2.3em');
       
       
       
       if (scheme.gen_mode === 'normal') {
-        gen_mode.dataset.title += ' Single Tone';
+        gen_mode.dataset.title += _('Single Tone');
         qsvg.setAttribute('src', '../assets/icons/droplet.svg');
       } else if (scheme.gen_mode === 'colorful') {
-        gen_mode.dataset.title += ' Colorful';
+        gen_mode.dataset.title += _('Colorful');
         qsvg.setAttribute('src', '../assets/icons/triadic.svg');
       } else if (scheme.gen_mode === 'dual') {
-        gen_mode.dataset.title += ' Dual Tone';
+        gen_mode.dataset.title += _('Dual Tone');
         qsvg.setAttribute('src', '../assets/icons/dual.svg');
       }
       
       let sync = card.querySelector('.actions .sync');
-      sync.classList.add('always-visible');
-      sync.style.cursor = 'default';
+      // sync.classList.add('always-visible');
+      sync.style.cursor = 'pointer';
       
       let synced = data.synced;
       
       let found = synced.find_by_id(scheme.id);
       
-      if (found && scheme.equals(found)) {
-        sync.dataset.title = 'Scheme is Synced Across Devices';
+      let sync_view_header = card.querySelector('.sync-view header');
+      let sync_view_content = card.querySelector('.sync-view .content');
+      
+      let btn_restore_from_cloud = card.querySelector('.sync-view .btn-restore-from-cloud');
+      let btn_remove_from_cloud = card.querySelector('.sync-view .btn-remove-from-cloud');
+      let btn_save_to_cloud = card.querySelector('.sync-view .btn-save-to-cloud');
+      btn_restore_from_cloud.disabled = true;
+      btn_remove_from_cloud.disabled = false;
+      btn_save_to_cloud.disabled = true;
+      
+      const usage_curr = BYTES_TO_STRING(found ? found.usage : 0);
+      let usage_tooltip = `<span style='display: flex; flex-direction: column; gap: 0.15em;'>`;
+      usage_tooltip += `<span><b>${_('Total Usage')}</b>: ${BYTES_TO_STRING(data.usage.sync)} / ${BYTES_TO_STRING(102400, 0)}</span>`;
+      usage_tooltip += `<span><b>${_('Item Usage')}</b>: ${usage_curr} / ${BYTES_TO_STRING(8192, 0)}</span>`;
+      usage_tooltip += `</span>`;
+      
+      
+      const usage_header = `<small data-title="${usage_tooltip}">${usage_curr}</small>`;
+      
+      
+      sync_view_header.innerHTML = `<span class="title">${_('Cloud Sync')}</span> · ${usage_header}`;
+      
+      // sync_view_content.innerHTML = `${BYTES_TO_STRING(data.usage.sync)} / ${BYTES_TO_STRING(102400, 0)}`;
+      
+      
+      if (found && scheme.equals(found) && synced.selected === scheme.id) {
+        sync.dataset.title = _('Scheme is Synced and Selected Across Devices');
         sync.innerHTML = ' <i class="fa-solid fa-cloud"></i>';
-      } else if (found) {
-        sync.dataset.title = 'Scheme has Local Changes (Click to Restore)';
-        sync.innerHTML = '<i class="fa-solid fa-download"></i>';
-        sync.style.cursor = 'pointer';
-      } else {
-        sync.dataset.title = 'Local Scheme';
+      } else if (found && scheme.equals(found)) {
+        sync.dataset.title = _('Scheme is Synced');
         sync.innerHTML = ' <i class="fa-regular fa-cloud"></i>';
+      } else if (found) {
+        sync.dataset.title = _('Scheme has unsaved changes') + ` (${_('Click for options')})`;
+        sync.innerHTML = '<i class="fa-solid fa-not-equal"></i>';
+        sync.style.cursor = 'pointer';
+        btn_restore_from_cloud.disabled = false;
+        btn_save_to_cloud.disabled = false;
+      } else {
+        sync.dataset.title = _('Local Scheme') + ` (${_('Click for options')})`;
+        sync.innerHTML = ' <i class="fa-solid fa-sync"></i>';
+        sync.style.cursor = 'pointer';
+        btn_restore_from_cloud.disabled = true;
+        btn_remove_from_cloud.disabled = true;
+        btn_save_to_cloud.disabled = false;
       }
       
-      
-      
-      let actions = card.querySelector('.actions');
       
       let modes = card.querySelector('.modes');
       modes.style.color = scheme.cached[4].to_string();
       
       
-      
-      
-      
       let button_clone = card.querySelector('.actions .clone');
-      button_clone.title = 'Clone Scheme';
+      button_clone.dataset.title = _('Clone Scheme');
       button_clone.innerHTML = '<i class="fa-solid fa-clone"></i>';
       // button_clone.style.color = scheme.cached[1].to_string();
       
@@ -504,17 +628,17 @@ function update_ui(data, origin = 'bg', ignore = []) {
       if (scheme.locked) {
         button_delete.classList.add('always-visible');
         button_delete.disabled = true;
-        button_delete.title = 'Locked Scheme (Cannot be Deleted)';
+        button_delete.dataset.title = _('Locked Scheme');
         button_delete.innerHTML = '<i class="fa-solid fa-lock"></i>';
       } else {
         button_delete.classList.remove('always-visible');
         button_delete.disabled = false;
-        button_delete.title = 'Delete Scheme';
+        button_delete.dataset.title = _('Delete Scheme');
         button_delete.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
       }
       
       let default_indicator = card.querySelector('.actions .default');
-      default_indicator.title = 'Default Scheme';
+      default_indicator.dataset.title = _('Default Scheme');
       default_indicator.innerHTML = '<i class="fa-solid fa-star"></i>';
       if (scheme.default) {
         default_indicator.style.display = '';
@@ -525,11 +649,12 @@ function update_ui(data, origin = 'bg', ignore = []) {
       }
       
     } else {
-      console.warn('Scheme not found for card', card.id);
-      card.style.transform = 'scale(0)';
+      console.warn('Scheme not found for card', card, scheme);
+      card.classList.remove('flip');
       card.style.width = '0px';
+      card.style.height = '0px';
       setTimeout(() => {
-        card.remove();
+        card.parentElement.remove();
       }, 305);
     }
   }
@@ -539,11 +664,15 @@ function update_ui(data, origin = 'bg', ignore = []) {
   
   const selected_card = scheme_container.querySelector('.scheme-card[data-selected="true"]');
   if (selected_card?.id !== selected_scheme.id) {
-    if (selected_card) selected_card.dataset.selected = 'false';
+    if (selected_card) {
+      selected_card.dataset.selected = 'false';
+      selected_card.parentElement.classList.remove('selected');
+    }
     let new_selected = scheme_container.querySelector(`.scheme-card[id="${selected_scheme.id}"]`);
     new_selected.dataset.selected = 'true';
+    new_selected.parentElement.classList.add('selected');
     scheme_selector.scrollTo({
-      left:     new_selected.offsetLeft - scheme_selector.clientWidth / 2 + new_selected.clientWidth / 2,
+      left:     new_selected.parentElement.offsetLeft - scheme_selector.clientWidth / 2 + new_selected.clientWidth / 2,
       behavior: 'smooth'
     });
   }
@@ -563,9 +692,6 @@ function update_ui(data, origin = 'bg', ignore = []) {
   text_picker.show_slider_value = panel_picker.show_slider_value = loaded.options.show_slider_value;
   text_picker.show_slider_label = panel_picker.show_slider_label = loaded.options.show_slider_label;
   
-  browser.theme.getCurrent().then(theme => {
-    set_theme_colors(theme);
-  });
   
   panel_picker.disabled = text_picker.disabled = !selected_scheme.editable;
   btn_surprise.disabled = !selected_scheme.editable;
@@ -627,68 +753,56 @@ browser.runtime.onMessage.addListener((message, sender, send_response) => {
 
 
 function set_theme_colors(theme) {
-  if (theme.colors) {
+  if (theme && theme.colors && options.apply_colors_popup.checked) {
     const url = new URL(window.location.href);
     const view = url.searchParams.get('view');
-    console.info('View param:', view);
     if (view === 'sidebar') {
-      // document.body.parentElement.style.setProperty('--q-base', theme.colors.sidebar);
-      // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.sidebar_text);
+      document.body.parentElement.style.setProperty('--q-base', theme.colors.sidebar);
+      document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.sidebar_text);
     } else if (view === 'popup') {
-      if (options.apply_colors_popup.checked) {
-        document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
-        document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
-      } else {
-        document.body.parentElement.style.removeProperty('--q-base');
-        document.body.parentElement.style.removeProperty('--q-fg-color');
-      }
+      
+      document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
+      document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
+      
     } else {
-      // document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
-      // document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
+      document.body.parentElement.style.setProperty('--q-base', theme.colors.popup);
+      document.body.parentElement.style.setProperty('--q-fg-color', theme.colors.popup_text);
     }
+  } else {
+    document.body.parentElement.style.removeProperty('--q-base');
+    document.body.parentElement.style.removeProperty('--q-fg-color');
   }
 }
 
 browser.theme.onUpdated.addListener((info) => {
-  if (info.theme.colors) {
+  if (info.theme) {
     set_theme_colors(info.theme);
   }
 });
 
-browser.theme.getCurrent().then(theme => {
-  set_theme_colors(theme);
-});
 
 
 
 
 // -- Initialize UI
-function get_updated_data() {
-  return new Promise((resolve, reject) => {
-    const bg = browser.runtime.getBackgroundPage();
-    bg.then(win => {
-      if (win) {
-        resolve(win.get_data());
-      } else {
-        browser.runtime.sendMessage({key: 'get_data', origin: MY_ID}).then(response => {
-          
-          if (response && response.loaded && response.synced) {
-            resolve({
-              loaded: QCollection.unserialize(response.loaded),
-              synced: QCollection.unserialize(response.synced)
-            });
-          } else {
-            reject('Invalid data response');
-          }
-        }).catch(err => {
-          reject('Failed to get data from background page: ' + err);
-        });
-      }
-    }).catch(err => {
-      reject('Failed to get background page: ' + err);
-    });
-  });
+async function get_updated_data() {
+  try {
+    const bg = await browser.runtime.getBackgroundPage();
+    if (bg) return bg.get_data();
+    const response = await browser.runtime.sendMessage({key: 'get_data', origin: MY_ID});
+    if (response && response.loaded && response.synced) {
+      return {
+        loaded: QCollection.unserialize(response.loaded),
+        synced: QCollection.unserialize(response.synced),
+        usage:  response.usage,
+      };
+    }
+  } catch (reason) {
+    throw reason;
+  }
+  
 }
+
 
 
 /**
@@ -760,6 +874,25 @@ function init(data) {
   
   update_ui(data, MY_ID);
   
+  if (options.apply_colors_popup.checked) {
+    browser.theme.getCurrent().then(theme => {
+      set_theme_colors(theme);
+    });
+  }
+  
+  const advanced = {timeout: null, count: 0};
+  header_logo.addEventListener('click', ev => {
+    if (advanced.timeout) clearTimeout(advanced.timeout);
+    advanced.count++;
+    if (advanced.count >= 10) {
+      advanced_prefs_section.classList.toggle('hide');
+    }
+    advanced.timeout = setTimeout(() => {
+      advanced.count = 0;
+    }, 500);
+    
+  });
+  
   document.addEventListener('DOMContentLoaded', () => {
     resize(true);
   });
@@ -794,8 +927,6 @@ get_updated_data().then(data => {
 });
 
 
-
-register_q_svg();
 
 
 

@@ -1,6 +1,6 @@
 {
-  "name": "photophobia-dynamic",
-  "description": "Photophobia Dynamic",
+  "name": "qolor",
+  "description": "Qolor: Dynamic Theme Engine for Firefox.",
   "version": "1.0.0",
   "author": "Raphael Quintão",
   "type": "module",

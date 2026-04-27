@@ -1,7 +1,7 @@
 <svg
   xmlns="http://www.w3.org/2000/svg"
   viewBox="0 0 144 144"
-  width="128" height="128"
+  width="48" height="48"
   preserveAspectRatio="xMidYMid meet"
   shape-rendering="geometricPrecision"
   color-rendering="optimizeQuality"
@@ -12,20 +12,18 @@
   <style>
     .colors {
       --p: oklch(0.674 0.200 79);
-      --s: oklch(0.674 0.23 8);
+      --s: oklch(0.644 0.23 8);
       --t: oklch(0.674 0.200 223);
+
 
       --p1: var(--primary, var(--p));
       --p2: oklch(from var(--p1) calc(l - 0.1) c h);
-      --p3: oklch(from var(--p1) calc(l - 0.3) c h);
 
       --s1: var(--secondary, var(--s));
       --s2: oklch(from var(--s1) calc(l - 0.09) c h);
-      --s3: oklch(from var(--s1) calc(l - 0.0) c calc(h - 20));
 
       --t1: var(--tertiary, var(--t));
-      --t2: oklch(from var(--t1) calc(l - 0.09) c h);
-      --t3: oklch(from var(--t1) calc(l - 0.8) c h);
+      --t2: oklch(from var(--t1) calc(l + 0.09) c h);
     }
 
   </style>
@@ -65,7 +63,7 @@
     <path
       id="leg_path"
       fill="url(#leg_gradient)" fill-opacity="1"
-      stroke="black" stroke-opacity="0.7"
+      stroke="black" stroke-opacity="0.9"
       stroke-width="1"
       d="M 158,67
          L 158,120

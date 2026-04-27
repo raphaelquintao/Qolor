@@ -1,0 +1,163 @@
+{
+  "extensionName": {
+    "message": "My Extension",
+    "description": "Name of the extension"
+  },
+  
+  "Show Output/Input": {
+    "message": "Show Output/Input"
+  },
+  "Show Slider Value": {
+    "message": "Show Slider Value"
+  },
+  "Show Slider Label": {
+    "message": "Show Slider Label"
+  },
+  
+  "Apply Colors to Popup/Sidebar": {
+    "message": "Apply Colors to Popup/Sidebar"
+  },
+  
+  "Toggle Sidebar": {
+    "message": "Toggle Sidebar"
+  },
+  "Open in Popout": {
+    "message": "Open in Popout"
+  },
+  "Restore Popout Position": {
+    "message": "Restore Popout Position"
+  },
+  
+  "New Scheme": {
+    "message": "New Scheme"
+  },
+  
+  "Color Wheel": {
+    "message": "Color Wheel"
+  },
+  
+  "Light Mode": {
+    "message": "Light Mode"
+  },
+  "Auto": {
+    "message": "Auto"
+  },
+  "Dark Mode": {
+    "message": "Dark Mode"
+  },
+  
+  "Single Tone": {
+    "message": "Single Tone"
+  },
+  "Colorful": {
+    "message": "Colorful"
+  },
+  "Dual Tone": {
+    "message": "Dual Tone"
+  },
+  
+  
+  "restore_tooltip": {
+    "message": "Restore from Cloud (All unsaved settings will be lost)"
+  },
+  "Save all to Cloud": {
+    "message": "Save all to Cloud"
+  },
+  
+  "Surprise Me!": {
+    "message": "Surprise Me!"
+  },
+  
+  "Generate a random Scheme": {
+    "message": "Generate a Random Scheme!"
+  },
+  
+  "Export Scheme": {
+    "message": "Export Scheme"
+  },
+  "Import Scheme": {
+    "message": "Import Scheme"
+  },
+  
+  "Generation Mode": {
+    "message": "Generation Mode"
+  },
+  
+  "Scheme is Synced": {
+    "message": "Scheme is Synced"
+  },
+  "Local Scheme": {
+    "message": "Local Scheme"
+  },
+  "Cloud Scheme": {
+    "message": "Cloud Scheme"
+  },
+  "Scheme has unsaved changes": {
+    "message": "Scheme has unsaved changes"
+  },
+  "Click for options": {
+    "message": "Click for options"
+  },
+  "Restore from Cloud": {
+    "message": "Restore from Cloud"
+  },
+  "Save to Cloud": {
+    "message": "Save to Cloud"
+  },
+  "Cloud Sync": {
+    "message": "Cloud Sync"
+  },
+  "Sync": {
+    "message": "Sync"
+  },
+  "Restore": {
+    "message": "Restore"
+  },
+  "Save": {
+    "message": "Save"
+  },
+  "Clone Scheme": {
+    "message": "Clone Scheme"
+  },
+  "Delete Scheme": {
+    "message": "Delete Scheme"
+  },
+  "Locked Scheme": {
+    "message": "Locked Scheme"
+  },
+  "Default Scheme": {
+    "message": "Default Scheme"
+  },
+  "Lock Scheme": {
+    "message": "Lock Scheme"
+  },
+  "Unlock Scheme": {
+    "message": "Unlock Scheme"
+  },
+  "Cancel": {
+    "message": "Cancel"
+  },
+  "Delete": {
+    "message": "Delete"
+  },
+  "Are you sure?": {
+    "message": "Are you sure?"
+  },
+  "Sure?": {
+    "message": "Sure?"
+  },
+  "This action cannot be undone.": {
+    "message": "This action cannot be undone."
+  },
+  "delete_message": {
+    "message": "Are you sure you want to delete this scheme?"
+  },
+  "sync_message": {
+    "message": "Syncing across devices may take up to <b>10 minutes</b>."
+  },
+  "sync_warning": {
+    "message": "Simultaneous edits can lead to version conflicts."
+  }
+  
+  
+}

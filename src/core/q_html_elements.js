@@ -1,11 +1,22 @@
 class QSVG extends HTMLElement {
   static CACHE = {};
   
-  _synced = false;
+  static observedAttributes = ['src', 'width', 'height', 'data-class'];
+
   
-  static get observedAttributes() {
-    return ['src', 'width', 'height', 'data-class'];
+  /**
+   *
+   */
+  constructor() {
+    super();
+    this.attachShadow({mode: 'open'});
   }
+  
+  connectedCallback() {
+    const src = this.getAttribute('src');
+    this.load_svg(src);
+  }
+  
   
   attributeChangedCallback(name, old_value, new_value) {
     if (old_value !== new_value) {
@@ -16,7 +27,6 @@ class QSVG extends HTMLElement {
   
   async load_svg(src, is_source = true) {
     if (!src) return;
-    if (!this.shadowRoot) this.attachShadow({mode: 'open'});
     
     if (QSVG.CACHE[src]) {
       this.shadowRoot.innerHTML = QSVG.CACHE[src];
@@ -26,7 +36,6 @@ class QSVG extends HTMLElement {
       QSVG.CACHE[src] = svg_text;
     }
     
-    if (is_source) this._synced = false;
     
     
     const _w = this.getAttribute('width');
@@ -47,17 +56,14 @@ class QSVG extends HTMLElement {
         svg.setAttribute('class', `${_svg_class} ${_data_class}`.trim());
       }
       
-      
       svg.style.display = 'block';
     }
   }
   
-  connectedCallback() {
-    const src = this.getAttribute('src');
-    this.load_svg(src);
-  }
+  
   
 }
+
 
 export function register_q_svg() {
   if (!customElements.get('q-svg')) {

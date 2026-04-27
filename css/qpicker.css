@@ -1,6 +1,5 @@
 .qpicker {
-
-  --qp-area-size: 175px;
+  --qp-area-size: 150px;
   --qp-border: 1px solid var(--q-input-border-color);
   --qp-border-radius: var(--q-border-radius);
 
@@ -42,7 +41,7 @@
   margin: auto;
   padding: 0;
   font-size: 1rem;
-  min-width: 160px;
+  min-width: var(--qp-area-size);
   user-select: none;
 
   * {

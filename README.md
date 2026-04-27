@@ -1,16 +1,15 @@
 # Qolor - A dynamic theme engine for Firefox
 
-Generate full Firefox themes from one or two colors. OKLCH color engine for perfect look and feel.
 
+**Qolor** is a dynamic, smart theme engine that generates modern, high-quality Firefox themes. It uses the cutting-edge OKLCH color space. This makes every combination look and feel perceptually perfect.
 
-### Why Qolor is different?
-- **Exhaustive UI Coverage:** Unlike basic tools, Qolor sets every available theme variable including popups, sidebars and interactive button states.
-- **OKLCH Color Model:** Qolor uses the OKLCH color space, which allows for more perceptually uniform adjustments, ensuring that your themes look great and maintain consistent contrast.
-- **Perfect Contrast:** Our engine calculates relative luminance in real-time, automatically "nudging" shades to ensure your text is always readable and meets accessibility standards
-- **Dynamic Adaptation:** Qolor intelligently adjusts your theme based on the colors you choose, ensuring a cohesive and visually appealing experience across all UI elements.
-- **User-Friendly Interface:** With a clean and intuitive design, Qolor makes it easy for anyone to create stunning themes without needing design expertise.
-- **Auto Sync:** Your themes are automatically saved and synced across devices using Firefox Sync, so you can enjoy your custom look wherever you go.
+Why Qolor?
 
+- **Total UI Coverage**: Most tools only change the toolbar. Qolor styles everything—popups, sidebars, menus, and interactive button states—for a truly seamless look.
+- **OKLCH Color Space**: The OKLCK color space allows Qolor to create harmonious palettes that maintain consistent lightness and saturation, ensuring every element is visually balanced.
+- **Intelligent Shades**: Smart algorithms automatically adjust shades for optimal contrast and readability.
+- **Always With You**: Full seamless integration with Firefox Sync.
+- **Open Source**: Fully open source and free to use, with the source code available on GitHub. Contributions and feedback are welcome!
 
 Support
 - Have feedback or need an adjustment? Use the addon page to contact the author or leave a review.

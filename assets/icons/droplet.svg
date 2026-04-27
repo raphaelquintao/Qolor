@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 -20 384 568"
      width="250" height="250"
-     style="color: var(--primary, #f5446e)"
      preserveAspectRatio="xMidYMid meet"
      shape-rendering="geometricPrecision"
+     color-rendering="optimizeQuality"
+     text-rendering="optimizeLegibility"
+     image-rendering="optimizeQuality"
 >
   <style>
     .colors {

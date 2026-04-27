@@ -3,6 +3,9 @@
      width="250" height="250"
      preserveAspectRatio="xMidYMid meet"
      shape-rendering="geometricPrecision"
+     color-rendering="optimizeQuality"
+     text-rendering="optimizeLegibility"
+     image-rendering="optimizeQuality"
 >
   <style>
     .colors {

@@ -79,6 +79,10 @@ export class QSlider extends EventTarget {
       this.group_container = group_container;
       this.container = group_container;
     }
+    // Pre-bind drag handlers once to avoid repeated .bind() allocations
+    this._bound_mousemove = this._handle_document_mousemove.bind(this);
+    this._bound_mouseup = this._handle_document_mouseup.bind(this);
+    
     this._create_elements();
     this._bind_events();
     this._update_grid();
@@ -153,17 +157,15 @@ export class QSlider extends EventTarget {
     this.thumb.classList.add('dragging');
     this.tracker.focus();
     
-    this._handle_document_mousemove = this._handle_document_mousemove.bind(this);
-    this._handle_document_mouseup = this._handle_document_mouseup.bind(this);
-    document.addEventListener('mousemove', this._handle_document_mousemove);
-    document.addEventListener('mouseup', this._handle_document_mouseup);
+    document.addEventListener('mousemove', this._bound_mousemove);
+    document.addEventListener('mouseup', this._bound_mouseup);
   }
   
   _handle_document_mouseup() {
     this._dragging = false;
     this.thumb.classList.remove('dragging', 'no-transition');
-    document.removeEventListener('mousemove', this._handle_document_mousemove);
-    document.removeEventListener('mouseup', this._handle_document_mouseup);
+    document.removeEventListener('mousemove', this._bound_mousemove);
+    document.removeEventListener('mouseup', this._bound_mouseup);
   }
   
   _handle_document_mousemove(e) {
@@ -635,6 +637,9 @@ export class QPicker extends EventTarget {
   }
   
   #bind_events() {
+    this._bound_mousemove = this._handle_document_mousemove.bind(this);
+    this._bound_mouseup = this._handle_document_mouseup.bind(this);
+    
     this.color_area.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -694,9 +699,7 @@ export class QPicker extends EventTarget {
   _handle_output_input(e) {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Parsing color from input:", e.target.innerText);
     const parsed_mode = this.#color.parse(e.target.innerText);
-    console.log("Parsed Mode:", parsed_mode);
     if (parsed_mode) {
       this.output_mode = parsed_mode;
       this.output_value.dataset.invalid = "false";
@@ -711,29 +714,21 @@ export class QPicker extends EventTarget {
   _start_drag() {
     this.#dragging = true;
     this.thumb.classList.add('dragging');
-    // this.dispatchEvent(new CustomEvent('pointerup', {}));
     
-    // const result = this.color_area.requestPointerLock();
-    // console.log("Pointer lock result:", result);
-    
-    this._handle_document_mousemove = this._handle_document_mousemove.bind(this);
-    this._handle_document_mouseup = this._handle_document_mouseup.bind(this);
-    document.addEventListener('mousemove', this._handle_document_mousemove);
-    document.addEventListener('mouseup', this._handle_document_mouseup);
+    document.addEventListener('mousemove', this._bound_mousemove);
+    document.addEventListener('mouseup', this._bound_mouseup);
   }
   
   _handle_document_mouseup() {
     this.#dragging = false;
     this.thumb.classList.remove('dragging', 'no-transition');
-    document.removeEventListener('mousemove', this._handle_document_mousemove);
-    document.removeEventListener('mouseup', this._handle_document_mouseup);
-    // document.exitPointerLock();
+    document.removeEventListener('mousemove', this._bound_mousemove);
+    document.removeEventListener('mouseup', this._bound_mouseup);
   }
   
   _handle_document_mousemove(e) {
     if (!this.#dragging) return;
     this.thumb.classList.add('no-transition');
-    console.log("Mouse move:", e.movementX, e.movementY, this.thumb);
     
     let rect = this.color_area.getBoundingClientRect();
     let x = (e.clientX - rect.left) / rect.width * 100;
